@@ -1,0 +1,10 @@
+name = "discord-afk-keepalive"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Automatically triggers every 10 minutes 24/7/365 to keep the AFK container active
+[triggers]
+crons = ["*/10 * * * *"]
+
+[vars]
+TARGET_URL = "https://discord-247-afk-worker.onrender.com"
