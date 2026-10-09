@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: discord-247-afk-worker
+    runtime: python
+    buildCommand: pip install -r cloud_afk/requirements.txt
+    startCommand: python -u cloud_afk/afk_worker.py
+    envVars:
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: GUILD_ID
+        sync: false
+      - key: CHANNEL_ID
+        sync: false
+      - key: SELF_MUTE
+        value: "true"
+      - key: SELF_DEAF
+        value: "true"
+      - key: PORT
+        value: "10000"
+      - key: ACTIVITY_STATUS
+        value: "online"
+      - key: ACTIVITY_NAME
+        value: "Visual Studio Code"
+      - key: ACTIVITY_TYPE
+        value: "0"
+      - key: ACTIVITY_DETAILS
+        value: "Coding 24/7"
+      - key: ACTIVITY_STATE
+        value: "In Voice Channel"

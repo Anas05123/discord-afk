@@ -1,0 +1,105 @@
+{
+    "discord_token": "YOUR_DISCORD_TOKEN_HERE",
+    "active_preset": "vscode",
+    "auto_detect_enabled": true,
+    "detect_rules": [
+        {
+            "process": "Code.exe",
+            "preset": "vscode",
+            "label": "Visual Studio Code"
+        },
+        {
+            "process": "devenv.exe",
+            "preset": "coding",
+            "label": "Visual Studio"
+        },
+        {
+            "process": "pycharm64.exe",
+            "preset": "coding",
+            "label": "PyCharm"
+        }
+    ],
+    "current_activity": {
+        "client_id": "810516608442695700",
+        "details": "Editing SyntaFlow",
+        "state": "Working Editing SyntaFlow Integrations",
+        "large_image": "vscode",
+        "large_text": "Visual Studio Code",
+        "small_image": "",
+        "small_text": "",
+        "show_timer": true,
+        "button1_label": "SyntaFlow Project",
+        "button1_url": "https://github.com",
+        "button2_label": "",
+        "button2_url": ""
+    },
+    "presets": {
+        "vscode": {
+            "name": "Visual Studio Code",
+            "client_id": "810516608442695700",
+            "details": "Editing SyntaFlow",
+            "state": "Working Editing SyntaFlow Integrations",
+            "large_image": "vscode",
+            "large_text": "Visual Studio Code",
+            "small_image": "",
+            "small_text": "",
+            "show_timer": true,
+            "buttons": [
+                {
+                    "label": "SyntaFlow Project",
+                    "url": "https://github.com"
+                }
+            ]
+        },
+        "coding": {
+            "name": "Programming & Development",
+            "client_id": "1198592398579482654",
+            "details": "Building Next-Gen Software",
+            "state": "In the Zone 💻",
+            "large_image": "https://raw.githubusercontent.com/github/explore/main/topics/visual-studio-code/visual-studio-code.png",
+            "large_text": "Coding Session",
+            "small_image": "https://raw.githubusercontent.com/github/explore/main/topics/git/git.png",
+            "small_text": "Git Master",
+            "show_timer": true,
+            "buttons": []
+        },
+        "gaming": {
+            "name": "Gaming",
+            "client_id": "1000000000000000001",
+            "details": "Competitive Ranked Match",
+            "state": "Victory in Sight 🏆",
+            "large_image": "https://cdn-icons-png.flaticon.com/512/686/686589.png",
+            "large_text": "Gaming Mode",
+            "small_image": "https://cdn-icons-png.flaticon.com/512/1055/1055672.png",
+            "small_text": "Level 99",
+            "show_timer": true,
+            "buttons": []
+        },
+        "chill": {
+            "name": "Chilling & Music",
+            "client_id": "1000000000000000002",
+            "details": "Listening to Lo-Fi Beats",
+            "state": "Relaxing / AFK ☕",
+            "large_image": "https://cdn-icons-png.flaticon.com/512/3074/3074767.png",
+            "large_text": "Lo-Fi Coffee",
+            "small_image": "https://cdn-icons-png.flaticon.com/512/727/727245.png",
+            "small_text": "Chill Vibes",
+            "show_timer": true,
+            "buttons": []
+        },
+        "studying": {
+            "name": "Study / Deep Focus",
+            "client_id": "1000000000000000003",
+            "details": "Preparing for Exams",
+            "state": "Do Not Disturb 📚",
+            "large_image": "https://cdn-icons-png.flaticon.com/512/2232/2232688.png",
+            "large_text": "Deep Focus",
+            "small_image": "https://cdn-icons-png.flaticon.com/512/2997/2997295.png",
+            "small_text": "Pomodoro",
+            "show_timer": true,
+            "buttons": []
+        }
+    },
+    "saved_guild_id": "YOUR_GUILD_ID",
+    "saved_channel_id": "YOUR_CHANNEL_ID"
+}

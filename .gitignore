@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# C# / Build artifacts
+bin/temp_prog.cs
+spoofer_runtime/
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Environment files and Discord secrets (DO NOT COMMIT)
+.env
+*.env
+cloud_afk/.env
+config.json
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+Thumbs.db
+Desktop.ini
+.DS_Store

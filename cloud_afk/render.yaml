@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: discord-247-afk-worker
+    runtime: python
+    buildCommand: pip install -r cloud_afk/requirements.txt
+    startCommand: python -u cloud_afk/afk_worker.py
+    envVars:
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: GUILD_ID
+        sync: false
+      - key: CHANNEL_ID
+        sync: false
+      - key: SELF_MUTE
+        value: "true"
+      - key: SELF_DEAF
+        value: "true"
+      - key: PORT
+        value: "10000"
