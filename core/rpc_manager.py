@@ -117,6 +117,7 @@ class RPCManager:
         except (PipeClosed, DiscordError) as e:
             self.is_connected = False
             self.rpc = None
+            self.current_client_id = None
             self._notify_status(f"Lost connection to Discord: {e}", False)
             return False
         except Exception as e:
@@ -145,4 +146,11 @@ class RPCManager:
         self._notify_status("Disconnected from Discord", False)
 
     def reset_timer(self) -> None:
+        """Resets timer to natural mode (starting right now at 00:00)."""
         self.start_time = time.time()
+
+    def set_elapsed_time(self, hours: float = 0, minutes: float = 0, seconds: float = 0) -> None:
+        """Sets the timer so Discord displays the chosen time already elapsed and continues counting naturally."""
+        total_offset = max(0.0, (float(hours) * 3600.0) + (float(minutes) * 60.0) + float(seconds))
+        self.start_time = time.time() - total_offset
+

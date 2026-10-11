@@ -121,6 +121,11 @@ class DiscordAFKWorker:
         self.resume_gateway_url: Optional[str] = None
         self.heartbeat_task: Optional[asyncio.Task] = None
         self.is_running = True
+        offset_sec = (
+            float(self.activity_config.get("elapsed_hours", 0) or 0) * 3600.0
+            + float(self.activity_config.get("elapsed_minutes", 0) or 0) * 60.0
+        )
+        self.start_timestamp_ms: int = int((time.time() - max(0.0, offset_sec)) * 1000)
 
     def _build_presence_payload(self) -> Dict[str, Any]:
         """Builds presence payload including custom activities (Playing, Designing, Streaming, Listening, Watching)."""
@@ -144,7 +149,7 @@ class DiscordAFKWorker:
                 act_entry["url"] = self.activity_config.get("stream_url", "https://twitch.tv/discord")
             
             if self.activity_config.get("show_timer", True):
-                act_entry["timestamps"] = {"start": int(time.time() * 1000)}
+                act_entry["timestamps"] = {"start": self.start_timestamp_ms}
 
             activities.append(act_entry)
 
@@ -167,13 +172,30 @@ class DiscordAFKWorker:
             logger.info(f"Updated live 24/7 Activity -> {self.activity_config.get('name')} ({self.activity_config.get('details')})")
 
     def update_activity(self, new_config: Dict[str, Any]) -> Dict[str, Any]:
-        """Thread-safe method called by the Web Dashboard to switch activity presets or custom text."""
+        """Thread-safe method called by the Web Dashboard to switch activity presets, custom text, or elapsed timer."""
         preset_key = new_config.get("preset", "").lower().strip()
         if preset_key and preset_key in CLOUD_PRESETS:
             self.activity_config.update(CLOUD_PRESETS[preset_key])
-        for field in ("name", "details", "state", "status", "application_id", "type"):
+        for field in ("name", "details", "state", "status", "application_id", "type", "show_timer"):
             if field in new_config and new_config[field] is not None:
                 self.activity_config[field] = new_config[field]
+
+        if "elapsed_hours" in new_config or "elapsed_minutes" in new_config or new_config.get("reset_timer"):
+            if new_config.get("reset_timer"):
+                hrs, mins = 0.0, 0.0
+            else:
+                try:
+                    hrs = float(new_config.get("elapsed_hours", self.activity_config.get("elapsed_hours", 0)) or 0)
+                except ValueError:
+                    hrs = 0.0
+                try:
+                    mins = float(new_config.get("elapsed_minutes", self.activity_config.get("elapsed_minutes", 0)) or 0)
+                except ValueError:
+                    mins = 0.0
+            self.activity_config["elapsed_hours"] = hrs
+            self.activity_config["elapsed_minutes"] = mins
+            offset_sec = max(0.0, (hrs * 3600.0) + (mins * 60.0))
+            self.start_timestamp_ms = int((time.time() - offset_sec) * 1000)
 
         if self.loop and self.ws:
             asyncio.run_coroutine_threadsafe(self._send_presence_update(), self.loop)

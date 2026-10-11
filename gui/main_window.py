@@ -369,16 +369,94 @@ class MainWindow(ctk.CTk):
         self.entry_small_img = self._create_clean_input(form_card, "Small Badge URL / Key (Optional):", "")
         self.entry_small_text = self._create_clean_input(form_card, "Small Badge Tooltip (Optional):", "")
 
+        # --- Elapsed Timer Chooser (Natural vs Custom Elapsed Time) ---
+        timer_lbl = ctk.CTkLabel(
+            form_card,
+            text="⏱️ Elapsed Timer Mode (Natural or Custom Time):",
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            text_color=TEXT_SECONDARY
+        )
+        timer_lbl.pack(anchor="w", padx=14, pady=(8, 4))
+
+        timer_top_row = ctk.CTkFrame(form_card, fg_color="transparent")
+        timer_top_row.pack(fill="x", padx=14, pady=(0, 6))
+
         self.var_show_timer = ctk.BooleanVar(value=True)
         self.cb_timer = ctk.CTkCheckBox(
-            form_card,
-            text="Show Elapsed Timer",
+            timer_top_row,
+            text="Show Timer",
             variable=self.var_show_timer,
             command=self._on_field_change,
             fg_color=COLOR_BLURPLE,
+            width=105,
             font=ctk.CTkFont(family="Segoe UI", size=12)
         )
-        self.cb_timer.pack(anchor="w", padx=14, pady=(8, 12))
+        self.cb_timer.pack(side="left", padx=(0, 8))
+
+        self.timer_mode_menu = ctk.CTkOptionMenu(
+            timer_top_row,
+            values=[
+                "⏱️ Natural (Starts at 00:00)",
+                "⚡ 30 Minutes Elapsed",
+                "🔥 2 Hours Elapsed",
+                "💻 5 Hours Elapsed (Deep Work)",
+                "🌙 12 Hours Elapsed",
+                "👑 24 Hours Elapsed (1 Day)",
+                "🚀 48 Hours Elapsed (2 Days)",
+                "🛠️ Custom Hours & Minutes"
+            ],
+            command=self._on_timer_mode_selected,
+            fg_color=BG_INPUT,
+            button_color=COLOR_BLURPLE,
+            button_hover_color="#4752c4",
+            dropdown_fg_color=BG_SURFACE,
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            height=30,
+            width=215
+        )
+        self.timer_mode_menu.pack(side="left", padx=(0, 6))
+
+        btn_reset_timer = ctk.CTkButton(
+            timer_top_row,
+            text="🔄 Natural (00:00)",
+            width=115,
+            height=30,
+            corner_radius=6,
+            fg_color=BG_INPUT,
+            hover_color=BORDER_COLOR,
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            command=self._reset_timer_to_natural
+        )
+        btn_reset_timer.pack(side="left")
+
+        timer_custom_row = ctk.CTkFrame(form_card, fg_color="transparent")
+        timer_custom_row.pack(fill="x", padx=14, pady=(0, 10))
+
+        lbl_hrs = ctk.CTkLabel(timer_custom_row, text="Custom Elapsed — Hours:", font=ctk.CTkFont(family="Segoe UI", size=11), text_color=TEXT_MUTED)
+        lbl_hrs.pack(side="left", padx=(0, 4))
+
+        self.entry_timer_hours = ctk.CTkEntry(timer_custom_row, placeholder_text="0", width=55, height=30, corner_radius=6, fg_color=BG_INPUT, border_color=BORDER_COLOR)
+        self.entry_timer_hours.insert(0, "0")
+        self.entry_timer_hours.pack(side="left", padx=(0, 10))
+
+        lbl_mins = ctk.CTkLabel(timer_custom_row, text="Minutes:", font=ctk.CTkFont(family="Segoe UI", size=11), text_color=TEXT_MUTED)
+        lbl_mins.pack(side="left", padx=(0, 4))
+
+        self.entry_timer_mins = ctk.CTkEntry(timer_custom_row, placeholder_text="0", width=55, height=30, corner_radius=6, fg_color=BG_INPUT, border_color=BORDER_COLOR)
+        self.entry_timer_mins.insert(0, "0")
+        self.entry_timer_mins.pack(side="left", padx=(0, 10))
+
+        btn_apply_timer = ctk.CTkButton(
+            timer_custom_row,
+            text="⏱️ Set Elapsed Time",
+            height=30,
+            corner_radius=6,
+            fg_color=COLOR_BLURPLE,
+            hover_color="#4752c4",
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            command=self._apply_custom_elapsed_timer
+        )
+        btn_apply_timer.pack(side="left", fill="x", expand=True)
 
         # Profile Buttons
         btn_lbl = ctk.CTkLabel(form_card, text="Profile Clickable Buttons (Optional):", font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"), text_color=TEXT_SECONDARY)
@@ -1392,15 +1470,67 @@ class MainWindow(ctk.CTk):
                 pass
         threading.Thread(target=_fetch, daemon=True).start()
 
-    def _update_preview_timer(self):
+    def _on_timer_mode_selected(self, choice: str):
+        preset_map = {
+            "⏱️ Natural (Starts at 00:00)": (0, 0),
+            "⚡ 30 Minutes Elapsed": (0, 30),
+            "🔥 2 Hours Elapsed": (2, 0),
+            "💻 5 Hours Elapsed (Deep Work)": (5, 0),
+            "🌙 12 Hours Elapsed": (12, 0),
+            "👑 24 Hours Elapsed (1 Day)": (24, 0),
+            "🚀 48 Hours Elapsed (2 Days)": (48, 0),
+        }
+        if choice in preset_map:
+            hrs, mins = preset_map[choice]
+            self.entry_timer_hours.delete(0, "end")
+            self.entry_timer_hours.insert(0, str(hrs))
+            self.entry_timer_mins.delete(0, "end")
+            self.entry_timer_mins.insert(0, str(mins))
+            self.rpc.set_elapsed_time(hours=hrs, minutes=mins)
+            self._update_preview_timer_once()
+            self._apply_current_activity()
+
+    def _reset_timer_to_natural(self):
+        self.timer_mode_menu.set("⏱️ Natural (Starts at 00:00)")
+        self.entry_timer_hours.delete(0, "end")
+        self.entry_timer_hours.insert(0, "0")
+        self.entry_timer_mins.delete(0, "end")
+        self.entry_timer_mins.insert(0, "0")
+        self.rpc.reset_timer()
+        self._update_preview_timer_once()
+        self._apply_current_activity()
+
+    def _apply_custom_elapsed_timer(self):
+        try:
+            hrs = float(self.entry_timer_hours.get().strip() or "0")
+        except ValueError:
+            hrs = 0.0
+        try:
+            mins = float(self.entry_timer_mins.get().strip() or "0")
+        except ValueError:
+            mins = 0.0
+
+        if hrs == 0 and mins == 0:
+            self.timer_mode_menu.set("⏱️ Natural (Starts at 00:00)")
+        else:
+            self.timer_mode_menu.set("🛠️ Custom Hours & Minutes")
+
+        self.rpc.set_elapsed_time(hours=hrs, minutes=mins)
+        self._update_preview_timer_once()
+        self._apply_current_activity()
+
+    def _update_preview_timer_once(self):
         if self.var_show_timer.get():
-            elapsed = int(time.time() - self.rpc.start_time)
+            elapsed = max(0, int(time.time() - self.rpc.start_time))
             mins, secs = divmod(elapsed, 60)
             hours, mins = divmod(mins, 60)
             if hours > 0:
                 self.lbl_preview_timer.configure(text=f"{hours:02d}:{mins:02d}:{secs:02d} elapsed")
             else:
                 self.lbl_preview_timer.configure(text=f"{mins:02d}:{secs:02d} elapsed")
+
+    def _update_preview_timer(self):
+        self._update_preview_timer_once()
         self.after(1000, self._update_preview_timer)
 
     def _apply_current_activity(self):
@@ -1412,6 +1542,15 @@ class MainWindow(ctk.CTk):
         small_image = self.entry_small_img.get().strip()
         small_text = self.entry_small_text.get().strip()
         show_timer = self.var_show_timer.get()
+
+        try:
+            timer_hours = float(self.entry_timer_hours.get().strip() or "0")
+        except ValueError:
+            timer_hours = 0.0
+        try:
+            timer_mins = float(self.entry_timer_mins.get().strip() or "0")
+        except ValueError:
+            timer_mins = 0.0
 
         buttons = []
         b1_lbl = self.entry_b1_label.get().strip()
@@ -1433,6 +1572,8 @@ class MainWindow(ctk.CTk):
             "small_image": small_image,
             "small_text": small_text,
             "show_timer": show_timer,
+            "timer_hours": timer_hours,
+            "timer_mins": timer_mins,
             "button1_label": b1_lbl,
             "button1_url": b1_url,
             "button2_label": b2_lbl,
@@ -1760,6 +1901,16 @@ class MainWindow(ctk.CTk):
             self.entry_small_text.insert(0, curr["small_text"])
         if "show_timer" in curr:
             self.var_show_timer.set(curr["show_timer"])
+        if "timer_hours" in curr or "timer_mins" in curr:
+            t_hrs = float(curr.get("timer_hours", 0) or 0)
+            t_mins = float(curr.get("timer_mins", 0) or 0)
+            self.entry_timer_hours.delete(0, "end")
+            self.entry_timer_hours.insert(0, str(int(t_hrs) if t_hrs.is_integer() else t_hrs))
+            self.entry_timer_mins.delete(0, "end")
+            self.entry_timer_mins.insert(0, str(int(t_mins) if t_mins.is_integer() else t_mins))
+            if t_hrs > 0 or t_mins > 0:
+                self.timer_mode_menu.set("🛠️ Custom Hours & Minutes")
+                self.rpc.set_elapsed_time(hours=t_hrs, minutes=t_mins)
         if curr.get("button1_label"):
             self.entry_b1_label.delete(0, "end")
             self.entry_b1_label.insert(0, curr["button1_label"])
@@ -1775,6 +1926,7 @@ class MainWindow(ctk.CTk):
             self._fetch_and_show_guilds()
 
         self._update_preview()
+        self._update_preview_timer_once()
 
     # =========================================================================
     # QUEST SPOOFER HANDLERS

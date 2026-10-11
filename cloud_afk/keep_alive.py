@@ -80,6 +80,28 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   </div>
 
   <div class="card">
+    <h2>⏱️ Elapsed Timer Mode (Natural or Custom Time)</h2>
+    <div class="presets" style="margin-bottom: 12px;">
+      <button class="preset-btn" onclick="setTimerPreset(0, 0)">🔄 Natural (Starts 00:00)</button>
+      <button class="preset-btn" onclick="setTimerPreset(0, 30)">⚡ 30m Elapsed</button>
+      <button class="preset-btn" onclick="setTimerPreset(2, 0)">🔥 2h Elapsed</button>
+      <button class="preset-btn" onclick="setTimerPreset(5, 0)">💻 5h Elapsed</button>
+      <button class="preset-btn" onclick="setTimerPreset(12, 0)">🌙 12h Elapsed</button>
+      <button class="preset-btn" onclick="setTimerPreset(24, 0)">👑 24h Elapsed</button>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <div class="field" style="flex: 1;">
+        <label>Custom Hours Elapsed</label>
+        <input id="timerHours" type="number" min="0" value="0">
+      </div>
+      <div class="field" style="flex: 1;">
+        <label>Custom Minutes Elapsed</label>
+        <input id="timerMins" type="number" min="0" value="0">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>⚙️ Custom Activity Override</h2>
     <div class="field">
       <label>Application / Activity Name</label>
@@ -93,7 +115,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       <label>Workspace / State (Line 2)</label>
       <input id="actState" placeholder="e.g. Vector Artboards & Pen Tool">
     </div>
-    <button class="apply-btn" onclick="applyCustom()">✨ Update 24/7 Discord Activity</button>
+    <button class="apply-btn" onclick="applyCustom()">✨ Update 24/7 Discord Activity & Timer</button>
   </div>
 </div>
 
@@ -113,10 +135,12 @@ async function refreshStatus() {
   } catch (e) {}
 }
 async function setPreset(preset) {
+  const hrs = parseFloat(document.getElementById('timerHours').value || '0');
+  const mins = parseFloat(document.getElementById('timerMins').value || '0');
   const r = await fetch('/api/activity', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({preset})
+    body: JSON.stringify({preset, elapsed_hours: hrs, elapsed_minutes: mins})
   });
   const d = await r.json();
   if (d.activity) {
@@ -127,11 +151,26 @@ async function setPreset(preset) {
     refreshStatus();
   }
 }
+async function setTimerPreset(hrs, mins) {
+  document.getElementById('timerHours').value = hrs;
+  document.getElementById('timerMins').value = mins;
+  const r = await fetch('/api/activity', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({elapsed_hours: hrs, elapsed_minutes: mins, reset_timer: (hrs === 0 && mins === 0)})
+  });
+  await r.json();
+  document.getElementById('presetToast').textContent =
+    (hrs === 0 && mins === 0) ? '⏱️ Timer reset to Natural (00:00)!' : `⏱️ Timer set to ${hrs}h ${mins}m elapsed!`;
+  refreshStatus();
+}
 async function applyCustom() {
   const payload = {
     name: document.getElementById('actName').value,
     details: document.getElementById('actDetails').value,
-    state: document.getElementById('actState').value
+    state: document.getElementById('actState').value,
+    elapsed_hours: parseFloat(document.getElementById('timerHours').value || '0'),
+    elapsed_minutes: parseFloat(document.getElementById('timerMins').value || '0')
   };
   const r = await fetch('/api/activity', {
     method: 'POST',
@@ -139,7 +178,7 @@ async function applyCustom() {
     body: JSON.stringify(payload)
   });
   const d = await r.json();
-  document.getElementById('presetToast').textContent = `✅ Updated custom activity: ${d.activity?.name || ''}`;
+  document.getElementById('presetToast').textContent = `✅ Updated custom activity & timer: ${d.activity?.name || ''}`;
   refreshStatus();
 }
 refreshStatus();
