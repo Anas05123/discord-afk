@@ -158,5 +158,24 @@ class TestQuestSpoofer(unittest.TestCase):
         spoofer.clear_queue()
         self.assertEqual(len(spoofer.queue), 0)
 
+    def test_creative_design_presets(self):
+        from core.games_db import GamesDatabase, VERIFIED_PRESETS
+        from core.languages_db import get_language_by_name_or_id
+        from core.config_manager import DEFAULT_PRESETS
+
+        preset_keys = {p.get("key") for p in VERIFIED_PRESETS}
+        for key in ("photoshop", "illustrator", "aftereffects", "premiere", "figma"):
+            self.assertIn(key, preset_keys)
+            self.assertIn(key, DEFAULT_PRESETS)
+            badge = get_language_by_name_or_id(key)
+            self.assertEqual(badge["id"], key)
+
+        ps_search = GamesDatabase.search_discord_games("photoshop")
+        self.assertTrue(any("photoshop" in g["name"].lower() for g in ps_search))
+
+        ai_search = GamesDatabase.search_discord_games("illustrator")
+        self.assertTrue(any("illustrator" in g["name"].lower() for g in ai_search))
+
 if __name__ == "__main__":
     unittest.main()
+

@@ -40,6 +40,63 @@ logger = logging.getLogger("AFKWorker")
 
 GATEWAY_URL = "wss://gateway.discord.gg/?v=10&encoding=json"
 
+CLOUD_PRESETS: Dict[str, Dict[str, Any]] = {
+    "photoshop": {
+        "name": "Adobe Photoshop",
+        "application_id": "748586506888806460",
+        "type": 0,
+        "details": "Editing Creative_Artwork.psd",
+        "state": "Workspace: Retouching & Layer Compositing",
+        "status": "online",
+        "show_timer": True
+    },
+    "illustrator": {
+        "name": "Adobe Illustrator",
+        "application_id": "751430009716998144",
+        "type": 0,
+        "details": "Designing Brand_Identity.ai",
+        "state": "Vector Artboards & Pen Tool",
+        "status": "online",
+        "show_timer": True
+    },
+    "aftereffects": {
+        "name": "Adobe After Effects",
+        "application_id": "748568089939148832",
+        "type": 0,
+        "details": "Compositing Motion_VFX.aep",
+        "state": "Timeline: 3D Camera & Keyframes",
+        "status": "online",
+        "show_timer": True
+    },
+    "premiere": {
+        "name": "Adobe Premiere Pro",
+        "application_id": "748580494324662353",
+        "type": 0,
+        "details": "Editing Master_Timeline.prproj",
+        "state": "Color Grading & Audio Mastering",
+        "status": "online",
+        "show_timer": True
+    },
+    "figma": {
+        "name": "Figma",
+        "application_id": "751430009716998144",
+        "type": 0,
+        "details": "Designing UI_Design_System.fig",
+        "state": "Auto-Layout & Interactive Prototype",
+        "status": "online",
+        "show_timer": True
+    },
+    "vscode": {
+        "name": "Visual Studio Code",
+        "application_id": "810516608442695700",
+        "type": 0,
+        "details": "Editing SyntaFlow",
+        "state": "Working Editing SyntaFlow Integrations",
+        "status": "online",
+        "show_timer": True
+    }
+}
+
 class DiscordAFKWorker:
     def __init__(
         self,
@@ -57,14 +114,16 @@ class DiscordAFKWorker:
         self.self_deaf = self_deaf
         self.activity_config = activity_config or {}
         self.ws: Optional[websockets.WebSocketClientProtocol] = None
+        self.loop: Optional[asyncio.AbstractEventLoop] = None
         self.sequence: Optional[int] = None
         self.session_id: Optional[str] = None
+        self.username: str = "Connecting..."
         self.resume_gateway_url: Optional[str] = None
         self.heartbeat_task: Optional[asyncio.Task] = None
         self.is_running = True
 
     def _build_presence_payload(self) -> Dict[str, Any]:
-        """Builds presence payload including custom activities (Playing, Streaming, Listening, Watching)."""
+        """Builds presence payload including custom activities (Playing, Designing, Streaming, Listening, Watching)."""
         status = self.activity_config.get("status", "online")
         act_name = self.activity_config.get("name", "").strip()
         
@@ -75,6 +134,8 @@ class DiscordAFKWorker:
                 "name": act_name,
                 "type": act_type
             }
+            if self.activity_config.get("application_id"):
+                act_entry["application_id"] = str(self.activity_config["application_id"])
             if self.activity_config.get("details"):
                 act_entry["details"] = self.activity_config["details"]
             if self.activity_config.get("state"):
@@ -93,6 +154,30 @@ class DiscordAFKWorker:
             "activities": activities,
             "afk": True
         }
+
+    async def _send_presence_update(self):
+        """Sends Opcode 3 (Presence Update) live over the active Gateway WebSocket."""
+        if self.ws:
+            presence_data = self._build_presence_payload()
+            payload = {
+                "op": 3,
+                "d": presence_data
+            }
+            await self.ws.send(json.dumps(payload))
+            logger.info(f"Updated live 24/7 Activity -> {self.activity_config.get('name')} ({self.activity_config.get('details')})")
+
+    def update_activity(self, new_config: Dict[str, Any]) -> Dict[str, Any]:
+        """Thread-safe method called by the Web Dashboard to switch activity presets or custom text."""
+        preset_key = new_config.get("preset", "").lower().strip()
+        if preset_key and preset_key in CLOUD_PRESETS:
+            self.activity_config.update(CLOUD_PRESETS[preset_key])
+        for field in ("name", "details", "state", "status", "application_id", "type"):
+            if field in new_config and new_config[field] is not None:
+                self.activity_config[field] = new_config[field]
+
+        if self.loop and self.ws:
+            asyncio.run_coroutine_threadsafe(self._send_presence_update(), self.loop)
+        return self.activity_config
 
     async def _send_heartbeat(self, interval_ms: float):
         interval_sec = interval_ms / 1000.0
@@ -161,6 +246,7 @@ class DiscordAFKWorker:
         )
 
     async def run(self):
+        self.loop = asyncio.get_running_loop()
         backoff = 3
         while self.is_running:
             try:
@@ -197,6 +283,7 @@ class DiscordAFKWorker:
                             if event_type == "READY":
                                 user_info = event_data.get("user", {})
                                 username = user_info.get("username", "Unknown")
+                                self.username = username
                                 self.session_id = event_data.get("session_id")
                                 self.resume_gateway_url = event_data.get("resume_gateway_url")
                                 logger.info(f"Successfully logged in as: {username} (ID: {user_info.get('id')})")
@@ -261,20 +348,36 @@ def main():
     self_deaf = os.getenv("SELF_DEAF", "true").lower() in ("true", "1", "yes")
     port = int(os.getenv("PORT", "10000"))
 
-    # Optional 24/7 Custom Activity while offline
-    act_config = {
-        "status": os.getenv("ACTIVITY_STATUS", "online"),  # online, idle, dnd
-        "name": os.getenv("ACTIVITY_NAME", "Visual Studio Code"),  # Any game or app name
-        "type": int(os.getenv("ACTIVITY_TYPE", "0")),  # 0=Playing, 1=Streaming, 2=Listening, 3=Watching
-        "details": os.getenv("ACTIVITY_DETAILS", "Coding 24/7"),
-        "state": os.getenv("ACTIVITY_STATE", "In Voice Channel"),
-        "stream_url": os.getenv("STREAM_URL", "https://twitch.tv/discord"),
-        "show_timer": os.getenv("SHOW_TIMER", "true").lower() in ("true", "1", "yes")
-    }
+    # Optional 24/7 Custom Activity while offline (supports ACTIVITY_PRESET=photoshop / illustrator / vscode)
+    preset_env = os.getenv("ACTIVITY_PRESET", "").lower().strip()
+    if preset_env in CLOUD_PRESETS:
+        act_config = CLOUD_PRESETS[preset_env].copy()
+    else:
+        act_config = {
+            "status": os.getenv("ACTIVITY_STATUS", "online"),  # online, idle, dnd
+            "name": os.getenv("ACTIVITY_NAME", "Visual Studio Code"),  # Any game, design tool, or app name
+            "application_id": os.getenv("ACTIVITY_APP_ID", "810516608442695700"),
+            "type": int(os.getenv("ACTIVITY_TYPE", "0")),  # 0=Playing, 1=Streaming, 2=Listening, 3=Watching
+            "details": os.getenv("ACTIVITY_DETAILS", "Coding 24/7"),
+            "state": os.getenv("ACTIVITY_STATE", "In Voice Channel"),
+            "stream_url": os.getenv("STREAM_URL", "https://twitch.tv/discord"),
+            "show_timer": os.getenv("SHOW_TIMER", "true").lower() in ("true", "1", "yes")
+        }
 
-    start_keep_alive(port=port)
+    worker = None
+    if token and guild_id and channel_id:
+        worker = DiscordAFKWorker(
+            token=token,
+            guild_id=guild_id,
+            channel_id=channel_id,
+            self_mute=self_mute,
+            self_deaf=self_deaf,
+            activity_config=act_config
+        )
 
-    if not token or not guild_id or not channel_id:
+    start_keep_alive(port=port, worker=worker)
+
+    if not worker:
         logger.error("=" * 60)
         logger.error("MISSING ENVIRONMENT VARIABLES!")
         logger.error("Please set DISCORD_TOKEN, GUILD_ID, and CHANNEL_ID in .env or cloud settings.")
@@ -291,15 +394,6 @@ def main():
     if act_config.get("name"):
         logger.info(f"24/7 Activity:     {act_config['name']} (Details: {act_config['details']})")
     logger.info("=" * 60)
-
-    worker = DiscordAFKWorker(
-        token=token,
-        guild_id=guild_id,
-        channel_id=channel_id,
-        self_mute=self_mute,
-        self_deaf=self_deaf,
-        activity_config=act_config
-    )
 
     try:
         asyncio.run(worker.run())

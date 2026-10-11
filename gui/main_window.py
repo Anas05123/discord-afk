@@ -275,20 +275,24 @@ class MainWindow(ctk.CTk):
         left_scroll = ctk.CTkScrollableFrame(page, fg_color="transparent")
         left_scroll.grid(row=1, column=0, sticky="nsew", padx=(20, 10), pady=(0, 16))
 
-        # --- Card A: Verified Game Presets ---
-        p_card = self._create_section_card(left_scroll, "⚡ Quick Presets (100% Verified IDs)")
+        # --- Card A: Verified Game & Creative Presets ---
+        p_card = self._create_section_card(left_scroll, "⚡ Quick Presets (Creative Design, Coding & Gaming)")
         preset_grid = ctk.CTkFrame(p_card, fg_color="transparent")
         preset_grid.pack(fill="x", padx=14, pady=(0, 12))
         preset_grid.grid_columnconfigure((0, 1, 2, 3), weight=1)
 
         self.preset_buttons: Dict[str, ctk.CTkButton] = {}
         presets = [
+            ("🎨 Photoshop", "photoshop"),
+            ("✒️ Illustrator", "illustrator"),
+            ("✨ After Effects", "aftereffects"),
+            ("🎬 Premiere Pro", "premiere"),
+            ("📐 Figma", "figma"),
             ("💻 VS Code", "vscode"),
             ("🎯 VALORANT", "valorant"),
             ("🪂 Fortnite", "fortnite"),
             ("🧱 ROBLOX", "roblox"),
             ("⚔️ Genshin", "genshin"),
-            ("🛡️ Overwatch", "overwatch"),
             ("☕ Lo-Fi Chill", "chill"),
             ("📚 Deep Study", "studying")
         ]
@@ -312,12 +316,12 @@ class MainWindow(ctk.CTk):
             btn.grid(row=r, column=c, padx=3, pady=3, sticky="ew")
             self.preset_buttons[key] = btn
 
-        # --- Card B: Framework & Language Badges ---
-        lang_card = self._create_section_card(left_scroll, "🏷️ Framework & Language Badge (Small Icon)")
+        # --- Card B: Framework & Creative Tool Badges ---
+        lang_card = self._create_section_card(left_scroll, "🏷️ Creative Tool & Language Badge (Small Icon)")
         
         l_desc = ctk.CTkLabel(
             lang_card,
-            text="Choose your active programming technology badge (renders as a small badge on your profile):",
+            text="Choose your active design tool or programming framework badge (renders as a small badge on your profile):",
             font=ctk.CTkFont(family="Segoe UI", size=11),
             text_color=TEXT_MUTED
         )
@@ -328,7 +332,14 @@ class MainWindow(ctk.CTk):
         pill_grid.grid_columnconfigure((0, 1, 2, 3), weight=1)
 
         self.lang_pills: Dict[str, ctk.CTkButton] = {}
-        for idx, item in enumerate(LANGUAGES_DB[:12]):
+        featured_badge_ids = [
+            "none", "photoshop", "illustrator", "aftereffects",
+            "premiere", "figma", "react", "nextjs",
+            "typescript", "javascript", "python", "nodejs",
+            "rust", "cpp", "csharp", "tailwind"
+        ]
+        badge_items = [get_language_by_name_or_id(bid) for bid in featured_badge_ids]
+        for idx, item in enumerate(badge_items):
             btn = ctk.CTkButton(
                 pill_grid,
                 text=f"{item['emoji']} {item['name']}",
@@ -392,10 +403,10 @@ class MainWindow(ctk.CTk):
         self.entry_b2_url.bind("<KeyRelease>", lambda e: self._on_field_change())
 
         # --- Card D: Auto-Detect ---
-        ad_card = self._create_section_card(left_scroll, "🤖 Smart File & App Auto-Detection")
+        ad_card = self._create_section_card(left_scroll, "🤖 Smart Creative & Code Auto-Detection")
         ad_desc = ctk.CTkLabel(
             ad_card,
-            text="Inspects active files in VS Code (.tsx/.jsx ➔ React, .py ➔ Python, .ts ➔ TypeScript)\nand automatically updates your Discord presence without clicking!",
+            text="Automatically detects Adobe Photoshop (.psd), Illustrator (.ai), After Effects (.aep), Premiere Pro, Figma,\nand VS Code (.tsx/.py/.ts) to update your Discord presence live!",
             font=ctk.CTkFont(family="Segoe UI", size=11),
             text_color=TEXT_MUTED,
             justify="left"
@@ -405,7 +416,7 @@ class MainWindow(ctk.CTk):
         self.var_autodetect = ctk.BooleanVar(value=self.config_mgr.get("auto_detect_enabled", True))
         self.sw_autodetect = ctk.CTkSwitch(
             ad_card,
-            text="Enable Auto-Detect Coding & Active Files",
+            text="Enable Auto-Detect Design Tools & Active Files",
             variable=self.var_autodetect,
             command=self._on_toggle_autodetect,
             font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
@@ -1247,7 +1258,7 @@ class MainWindow(ctk.CTk):
 
         preset = None
         for p in VERIFIED_PRESETS:
-            if key in p["name"].lower() or (key == "vscode" and "visual studio code" in p["name"].lower()):
+            if p.get("key") == key or key in p["name"].lower() or (key == "vscode" and "visual studio code" in p["name"].lower()):
                 preset = p
                 break
         if not preset:
@@ -1317,7 +1328,17 @@ class MainWindow(ctk.CTk):
             self._load_async_image(large_img, self.lbl_preview_large_img, (60, 60))
         else:
             txt_lower = large_text.lower()
-            if "code" in txt_lower or "vs" in txt_lower:
+            if "photoshop" in txt_lower:
+                self.lbl_preview_large_img.configure(image="", text="🎨", font=ctk.CTkFont(size=30))
+            elif "illustrator" in txt_lower:
+                self.lbl_preview_large_img.configure(image="", text="✒️", font=ctk.CTkFont(size=30))
+            elif "after effects" in txt_lower:
+                self.lbl_preview_large_img.configure(image="", text="✨", font=ctk.CTkFont(size=30))
+            elif "premiere" in txt_lower:
+                self.lbl_preview_large_img.configure(image="", text="🎬", font=ctk.CTkFont(size=30))
+            elif "figma" in txt_lower:
+                self.lbl_preview_large_img.configure(image="", text="📐", font=ctk.CTkFont(size=30))
+            elif "code" in txt_lower or "vs" in txt_lower:
                 self.lbl_preview_large_img.configure(image="", text="💻", font=ctk.CTkFont(size=30))
             elif "valorant" in txt_lower:
                 self.lbl_preview_large_img.configure(image="", text="🎯", font=ctk.CTkFont(size=30))
@@ -1453,20 +1474,31 @@ class MainWindow(ctk.CTk):
         def _update():
             if detected and rule:
                 label = rule.get("label", "Application")
+                preset_key = rule.get("preset", "vscode")
                 workspace = metadata.get("workspace", "SyntaFlow Integrations")
                 file_name = metadata.get("file", "SyntaFlow")
                 detected_lang = metadata.get("detected_lang", "none")
 
                 self.lbl_detect_status.configure(text=f"● Detected: {label} ({file_name})", text_color=COLOR_GREEN)
-                if detected_lang and detected_lang != "none":
-                    self._select_language_badge(detected_lang)
-                else:
-                    self._select_language_badge("none")
 
-                self.entry_details.delete(0, "end")
-                self.entry_details.insert(0, f"Editing {file_name}")
-                self.entry_state.delete(0, "end")
-                self.entry_state.insert(0, f"Working Editing {workspace}")
+                if preset_key in ("photoshop", "illustrator", "aftereffects", "premiere", "figma"):
+                    self._apply_named_preset(preset_key)
+                    action_verb = "Designing" if preset_key in ("illustrator", "figma") else "Editing"
+                    self.entry_details.delete(0, "end")
+                    self.entry_details.insert(0, f"{action_verb} {file_name}")
+                    self.entry_state.delete(0, "end")
+                    self.entry_state.insert(0, f"Workspace: {workspace}")
+                else:
+                    if detected_lang and detected_lang != "none":
+                        self._select_language_badge(detected_lang)
+                    else:
+                        self._select_language_badge("none")
+
+                    self.entry_details.delete(0, "end")
+                    self.entry_details.insert(0, f"Editing {file_name}")
+                    self.entry_state.delete(0, "end")
+                    self.entry_state.insert(0, f"Working Editing {workspace}")
+
                 self._update_preview()
                 self._apply_current_activity()
             else:

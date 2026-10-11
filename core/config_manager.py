@@ -20,6 +20,66 @@ DEFAULT_PRESETS: Dict[str, Dict[str, Any]] = {
             {"label": "SyntaFlow Project", "url": "https://github.com"}
         ]
     },
+    "photoshop": {
+        "name": "Adobe Photoshop",
+        "client_id": "748586506888806460",
+        "details": "Editing Creative_Artwork.psd",
+        "state": "Workspace: Retouching & Layer Compositing",
+        "large_image": "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/PHXS.png",
+        "large_text": "Adobe Photoshop 2026",
+        "small_image": "https://cdn-icons-png.flaticon.com/512/5968/5968520.png",
+        "small_text": "Creative Cloud",
+        "show_timer": True,
+        "buttons": []
+    },
+    "illustrator": {
+        "name": "Adobe Illustrator",
+        "client_id": "751430009716998144",
+        "details": "Designing Brand_Identity.ai",
+        "state": "Vector Artboards & Pen Tool",
+        "large_image": "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/ILST.png",
+        "large_text": "Adobe Illustrator 2026",
+        "small_image": "https://cdn-icons-png.flaticon.com/512/5968/5968472.png",
+        "small_text": "Vector Engine",
+        "show_timer": True,
+        "buttons": []
+    },
+    "aftereffects": {
+        "name": "Adobe After Effects",
+        "client_id": "748568089939148832",
+        "details": "Compositing Motion_VFX.aep",
+        "state": "Timeline: 3D Camera & Keyframes",
+        "large_image": "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/AEFT.png",
+        "large_text": "Adobe After Effects 2026",
+        "small_image": "",
+        "small_text": "Motion Graphics",
+        "show_timer": True,
+        "buttons": []
+    },
+    "premiere": {
+        "name": "Adobe Premiere Pro",
+        "client_id": "748580494324662353",
+        "details": "Editing Master_Timeline.prproj",
+        "state": "Color Grading & Audio Mastering",
+        "large_image": "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/PPRO.png",
+        "large_text": "Adobe Premiere Pro 2026",
+        "small_image": "",
+        "small_text": "4K 60fps Timeline",
+        "show_timer": True,
+        "buttons": []
+    },
+    "figma": {
+        "name": "Figma",
+        "client_id": "751430009716998144",
+        "details": "Designing UI_Design_System.fig",
+        "state": "Auto-Layout & Interactive Prototype",
+        "large_image": "https://cdn-icons-png.flaticon.com/512/5968/5968705.png",
+        "large_text": "Figma UI/UX",
+        "small_image": "",
+        "small_text": "UI/UX Studio",
+        "show_timer": True,
+        "buttons": []
+    },
     "coding": {
         "name": "Programming & Development",
         "client_id": "383226320970055681",
@@ -74,6 +134,11 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "active_preset": "vscode",
     "auto_detect_enabled": True,
     "detect_rules": [
+        {"process": "Photoshop.exe", "preset": "photoshop", "label": "Adobe Photoshop"},
+        {"process": "Illustrator.exe", "preset": "illustrator", "label": "Adobe Illustrator"},
+        {"process": "AfterFX.exe", "preset": "aftereffects", "label": "Adobe After Effects"},
+        {"process": "Adobe Premiere Pro.exe", "preset": "premiere", "label": "Adobe Premiere Pro"},
+        {"process": "Figma.exe", "preset": "figma", "label": "Figma"},
         {"process": "Code.exe", "preset": "vscode", "label": "Visual Studio Code"},
         {"process": "devenv.exe", "preset": "coding", "label": "Visual Studio"},
         {"process": "pycharm64.exe", "preset": "coding", "label": "PyCharm"}

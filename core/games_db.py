@@ -3,6 +3,7 @@ from typing import List, Dict, Any, Optional
 
 VERIFIED_PRESETS = [
     {
+        "key": "vscode",
         "name": "Visual Studio Code",
         "category": "Development",
         "client_id": "810516608442695700",
@@ -15,6 +16,72 @@ VERIFIED_PRESETS = [
         "icon": "💻"
     },
     {
+        "key": "photoshop",
+        "name": "Adobe Photoshop",
+        "category": "Creative & Design",
+        "client_id": "748586506888806460",
+        "details": "Editing Creative_Artwork.psd",
+        "state": "Workspace: Retouching & Layer Compositing",
+        "large_image": "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/PHXS.png",
+        "large_text": "Adobe Photoshop 2026",
+        "small_image": "https://cdn-icons-png.flaticon.com/512/5968/5968520.png",
+        "small_text": "Creative Cloud",
+        "icon": "🎨"
+    },
+    {
+        "key": "illustrator",
+        "name": "Adobe Illustrator",
+        "category": "Creative & Design",
+        "client_id": "751430009716998144",
+        "details": "Designing Brand_Identity.ai",
+        "state": "Vector Artboards & Pen Tool",
+        "large_image": "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/ILST.png",
+        "large_text": "Adobe Illustrator 2026",
+        "small_image": "https://cdn-icons-png.flaticon.com/512/5968/5968472.png",
+        "small_text": "Vector Engine",
+        "icon": "✒️"
+    },
+    {
+        "key": "aftereffects",
+        "name": "Adobe After Effects",
+        "category": "Creative & Design",
+        "client_id": "748568089939148832",
+        "details": "Compositing Motion_VFX.aep",
+        "state": "Timeline: 3D Camera & Keyframes",
+        "large_image": "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/AEFT.png",
+        "large_text": "Adobe After Effects 2026",
+        "small_image": "",
+        "small_text": "Motion Graphics",
+        "icon": "✨"
+    },
+    {
+        "key": "premiere",
+        "name": "Adobe Premiere Pro",
+        "category": "Creative & Design",
+        "client_id": "748580494324662353",
+        "details": "Editing Master_Timeline.prproj",
+        "state": "Color Grading & Audio Mastering",
+        "large_image": "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/PPRO.png",
+        "large_text": "Adobe Premiere Pro 2026",
+        "small_image": "",
+        "small_text": "4K 60fps Timeline",
+        "icon": "🎬"
+    },
+    {
+        "key": "figma",
+        "name": "Figma",
+        "category": "Creative & Design",
+        "client_id": "751430009716998144",
+        "details": "Designing UI_Design_System.fig",
+        "state": "Auto-Layout & Interactive Prototype",
+        "large_image": "https://cdn-icons-png.flaticon.com/512/5968/5968705.png",
+        "large_text": "Figma UI/UX",
+        "small_image": "",
+        "small_text": "UI/UX Studio",
+        "icon": "📐"
+    },
+    {
+        "key": "valorant",
         "name": "VALORANT",
         "category": "Gaming",
         "client_id": "700136079562375258",
@@ -27,6 +94,7 @@ VERIFIED_PRESETS = [
         "icon": "🎯"
     },
     {
+        "key": "fortnite",
         "name": "Fortnite",
         "category": "Gaming",
         "client_id": "432980957394370572",
@@ -39,6 +107,7 @@ VERIFIED_PRESETS = [
         "icon": "🪂"
     },
     {
+        "key": "roblox",
         "name": "ROBLOX",
         "category": "Gaming",
         "client_id": "363445589247131668",
@@ -51,6 +120,7 @@ VERIFIED_PRESETS = [
         "icon": "🧱"
     },
     {
+        "key": "genshin",
         "name": "Genshin Impact",
         "category": "Gaming",
         "client_id": "762434991303950386",
@@ -63,6 +133,7 @@ VERIFIED_PRESETS = [
         "icon": "⚔️"
     },
     {
+        "key": "overwatch",
         "name": "Overwatch",
         "category": "Gaming",
         "client_id": "356875221078245376",
@@ -75,6 +146,7 @@ VERIFIED_PRESETS = [
         "icon": "🛡️"
     },
     {
+        "key": "chill",
         "name": "Lo-Fi Chill & Beats",
         "category": "Music & Chill",
         "client_id": "383226320970055681",
@@ -87,6 +159,7 @@ VERIFIED_PRESETS = [
         "icon": "☕"
     },
     {
+        "key": "studying",
         "name": "Deep Study & Focus",
         "category": "Productivity",
         "client_id": "383226320970055681",
@@ -132,6 +205,46 @@ CURATED_GAMES: List[Dict[str, Any]] = [
         "category": "Action Shooter",
         "icon": "https://cdn.discordapp.com/app-icons/1198592398579482654/53ca5932587033cb79e72aa5c093cf1a.png",
         "keywords": ["helldivers", "helldivers 2", "arrowhead"]
+    },
+    {
+        "id": "748586506888806460",
+        "name": "Adobe Photoshop",
+        "exe": "Photoshop.exe",
+        "category": "Creative & Design",
+        "icon": "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/PHXS.png",
+        "keywords": ["photoshop", "adobe photoshop", "ps", "psd", "design"]
+    },
+    {
+        "id": "751430009716998144",
+        "name": "Adobe Illustrator",
+        "exe": "Illustrator.exe",
+        "category": "Creative & Design",
+        "icon": "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/ILST.png",
+        "keywords": ["illustrator", "adobe illustrator", "ai", "vector", "design"]
+    },
+    {
+        "id": "748568089939148832",
+        "name": "Adobe After Effects",
+        "exe": "AfterFX.exe",
+        "category": "Creative & Design",
+        "icon": "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/AEFT.png",
+        "keywords": ["after effects", "adobe after effects", "ae", "afterfx", "motion"]
+    },
+    {
+        "id": "748580494324662353",
+        "name": "Adobe Premiere Pro",
+        "exe": "Adobe Premiere Pro.exe",
+        "category": "Creative & Design",
+        "icon": "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/PPRO.png",
+        "keywords": ["premiere", "premiere pro", "adobe premiere", "video editing"]
+    },
+    {
+        "id": "751430009716998144",
+        "name": "Figma",
+        "exe": "Figma.exe",
+        "category": "Creative & Design",
+        "icon": "https://cdn-icons-png.flaticon.com/512/5968/5968705.png",
+        "keywords": ["figma", "ui", "ux", "prototype", "design"]
     }
 ]
 
@@ -165,9 +278,10 @@ class GamesDatabase:
             return []
 
         matched: List[Dict[str, Any]] = []
+        seen_names = set()
         seen_ids = set()
 
-        # 1. Check curated user games (NTE, Giants, Hellraiser, Helldivers)
+        # 1. Check curated user games & creative tools
         for cg in CURATED_GAMES:
             all_kw = cg.get("keywords", []) + [cg["name"].lower(), cg["exe"].lower()]
             if any(query_str in kw for kw in all_kw):
@@ -178,12 +292,18 @@ class GamesDatabase:
                     "category": cg["category"],
                     "icon": cg.get("icon", "🎮")
                 })
+                seen_names.add(cg["name"].lower())
                 seen_ids.add(cg["id"])
 
         # 2. Check local verified presets
         for p in VERIFIED_PRESETS:
             cid = p.get("client_id")
-            if cid not in seen_ids and (query_str in p["name"].lower() or query_str in p.get("large_image", "").lower()):
+            p_name_lower = p["name"].lower()
+            if p_name_lower not in seen_names and (
+                query_str in p_name_lower
+                or query_str in p.get("key", "").lower()
+                or query_str in p.get("category", "").lower()
+            ):
                 matched.append({
                     "id": cid,
                     "name": p["name"],
@@ -191,6 +311,7 @@ class GamesDatabase:
                     "category": p["category"],
                     "icon": p.get("icon", "🎮")
                 })
+                seen_names.add(p_name_lower)
                 seen_ids.add(cid)
 
         # 3. Load Discord detectable cache

@@ -137,6 +137,51 @@ LANGUAGES_DB: List[Dict[str, Any]] = [
         "default_state": "Utility-First CSS"
     },
     {
+        "id": "photoshop",
+        "name": "Photoshop",
+        "emoji": "🎨",
+        "tooltip": "Adobe Photoshop CC",
+        "url": "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/PHXS.png",
+        "default_details": "Editing Creative_Artwork.psd",
+        "default_state": "Workspace: Retouching & Layer Compositing"
+    },
+    {
+        "id": "illustrator",
+        "name": "Illustrator",
+        "emoji": "✒️",
+        "tooltip": "Adobe Illustrator CC",
+        "url": "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/ILST.png",
+        "default_details": "Designing Brand_Identity.ai",
+        "default_state": "Vector Artboards & Pen Tool"
+    },
+    {
+        "id": "aftereffects",
+        "name": "After Effects",
+        "emoji": "✨",
+        "tooltip": "Adobe After Effects CC",
+        "url": "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/AEFT.png",
+        "default_details": "Compositing Motion_VFX.aep",
+        "default_state": "Timeline: 3D Camera & Keyframes"
+    },
+    {
+        "id": "premiere",
+        "name": "Premiere Pro",
+        "emoji": "🎬",
+        "tooltip": "Adobe Premiere Pro CC",
+        "url": "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/PPRO.png",
+        "default_details": "Editing Master_Timeline.prproj",
+        "default_state": "Color Grading & Audio Mastering"
+    },
+    {
+        "id": "figma",
+        "name": "Figma",
+        "emoji": "📐",
+        "tooltip": "Figma UI/UX Design",
+        "url": "https://cdn-icons-png.flaticon.com/512/5968/5968705.png",
+        "default_details": "Designing UI_Design_System.fig",
+        "default_state": "Auto-Layout & Interactive Prototype"
+    },
+    {
         "id": "html_css",
         "name": "HTML & CSS",
         "emoji": "🌐",
@@ -153,3 +198,4 @@ def get_language_by_name_or_id(query: str) -> Dict[str, Any]:
         if item["id"] == q or item["name"].lower() == q or q in item["name"].lower():
             return item
     return LANGUAGES_DB[0]
+

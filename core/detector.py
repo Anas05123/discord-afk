@@ -77,6 +77,27 @@ class ProcessDetector:
             pass
         return metadata
 
+    def _inspect_design_details(self, proc: psutil.Process, preset_key: str) -> Dict[str, Any]:
+        """Extracts active design project file (.psd, .ai, .aep, .prproj, .fig) from creative process."""
+        defaults = {
+            "photoshop": {"file": "Creative_Artwork.psd", "workspace": "Retouching & Layer Compositing", "detected_lang": "photoshop"},
+            "illustrator": {"file": "Brand_Identity.ai", "workspace": "Vector Artboards & Pen Tool", "detected_lang": "illustrator"},
+            "aftereffects": {"file": "Motion_VFX.aep", "workspace": "3D Camera & Keyframes", "detected_lang": "aftereffects"},
+            "premiere": {"file": "Master_Timeline.prproj", "workspace": "Color Grading & Audio Mastering", "detected_lang": "premiere"},
+            "figma": {"file": "UI_Design_System.fig", "workspace": "Auto-Layout & Interactive Prototype", "detected_lang": "figma"},
+        }
+        metadata = defaults.get(preset_key, {"file": "Design_Project", "workspace": "Creative Studio", "detected_lang": preset_key}).copy()
+        design_exts = (".psd", ".psb", ".ai", ".eps", ".svg", ".aep", ".prproj", ".fig", ".png", ".jpg")
+        try:
+            for arg in proc.cmdline()[1:]:
+                cleaned = arg.strip('"').replace("\\", "/")
+                if cleaned.lower().endswith(design_exts):
+                    metadata["file"] = cleaned.split("/")[-1]
+                    break
+        except (psutil.AccessDenied, psutil.NoSuchProcess, Exception):
+            pass
+        return metadata
+
     def _monitor_loop(self) -> None:
         while self._is_running:
             if not self._enabled:
@@ -98,8 +119,11 @@ class ProcessDetector:
                             target_proc = rule.get("process", "").lower()
                             if target_proc and (target_proc == p_name_lower or target_proc in p_name_lower):
                                 detected_rule = rule
+                                preset_key = rule.get("preset", "")
                                 if "code.exe" in p_name_lower:
                                     matched_metadata = self._inspect_vscode_details(proc)
+                                elif preset_key in ("photoshop", "illustrator", "aftereffects", "premiere", "figma"):
+                                    matched_metadata = self._inspect_design_details(proc, preset_key)
                                 break
                         if detected_rule:
                             break
