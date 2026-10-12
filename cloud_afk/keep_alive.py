@@ -483,22 +483,46 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <div class="top-bar">
       <div>
         <div class="page-title">Voice Room AFK Connection</div>
-        <div class="page-sub">Join and remain in any Discord voice channel or AFK room 24/7 with automatic mute and deafen.</div>
+        <div class="page-sub">Join and remain in any Discord voice channel or AFK room 24/7 with automatic mute, deafen, and Join-to-Create room tracking.</div>
       </div>
     </div>
 
     <div class="split-grid">
       <div class="col-scroll">
         <div class="section-card">
-          <div class="card-title">🔐 Connection Credentials</div>
+          <div class="card-title">🔐 Connection Credentials & Live Room Picker</div>
           <div class="form-group">
-            <label class="form-label">Server ID (Guild ID):</label>
-            <input class="form-input" id="entryGuildId" value="1442511921898192917">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label class="form-label" style="margin:0;">Select Server (Guild):</label>
+              <button class="btn-secondary" style="height:24px; padding:0 10px; font-size:10px;" onclick="loadUserGuilds()">⚡ Load My Servers</button>
+            </div>
+            <select class="form-select" id="selectGuildDropdown" onchange="onGuildDropdownChange(this.value)" style="margin-bottom:6px;">
+              <option value="1442511921898192917">★ Main Server (1442511921898192917)</option>
+            </select>
+            <input class="form-input" id="entryGuildId" value="1442511921898192917" placeholder="Server ID (Guild ID)">
           </div>
+
           <div class="form-group">
-            <label class="form-label">Voice Channel ID:</label>
-            <input class="form-input" id="entryChannelId" value="1557661172990480487">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label class="form-label" style="margin:0;">Select Voice Room in Server:</label>
+              <button class="btn-secondary" style="height:24px; padding:0 10px; font-size:10px;" onclick="loadGuildVoiceChannels()">🔄 Refresh Voice Rooms</button>
+            </div>
+            <select class="form-select" id="selectChannelDropdown" onchange="onChannelDropdownChange(this.value)" style="margin-bottom:6px;">
+              <option value="1484570674659070063">🔊 ➕・JOIN TO CREATE (Auto-Creates Your Room) — 1484570674659070063</option>
+              <option value="1442511922565091382">🔊 🏢・𝖬𝖺𝗂𝗇 𝖫𝗈𝖻𝖻𝗒 — 1442511922565091382</option>
+              <option value="1475888620630966322">🔊 🕌︱بثّ القُرآن الكريم — 1475888620630966322</option>
+              <option value="1482608241316729035">🔊 📚・𝖲𝗍𝗎𝖽𝗒 𝖫𝗈𝗎𝗇𝗀𝖾 — 1482608241316729035</option>
+              <option value="1446993760977289276">🔊 🎸・𝖬𝗎𝗌𝗂𝖼 — 1446993760977289276</option>
+              <option value="1447784971023421663">🔊 🍿・𝖬𝗈𝗏𝗂𝖾 𝖳𝗂𝗆𝖾 — 1447784971023421663</option>
+              <option value="1460725269806584081">🔊 🗿・ 𝖫𝗈𝗇𝖾 𝖱𝖺𝗇𝗀𝖾𝗋 — 1460725269806584081</option>
+              <option value="1460725809600925706">🔊 🎸・ 𝖱𝗈𝖼𝗄 & 𝖱𝗈𝗅𝗅 — 1460725809600925706</option>
+              <option value="1460726493490577613">🔊 🎯・ 𝖳𝗁𝗋𝖾𝖾 𝖬𝗎𝗌𝗄𝖾𝗍𝖾𝖾𝗋𝗌 — 1460726493490577613</option>
+              <option value="1482580750267056269">🔊 ✨・ 𝖥𝗂𝗏𝖾 𝖲𝗍𝖺𝗋𝗌 — 1482580750267056269</option>
+              <option value="1496634010980319263">🔊 🧬・ 𝖥𝖺𝗇𝗍𝖺𝗌𝗍𝗂𝖼 𝖥𝗈𝗎𝗋 — 1496634010980319263</option>
+            </select>
+            <input class="form-input" id="entryChannelId" value="1484570674659070063" placeholder="Voice Channel ID (or pick from dropdown above)">
           </div>
+
           <div class="form-group">
             <label class="form-label">Custom Activity while in Room (Optional):</label>
             <input class="form-input" id="entryVoiceActivity" value="Adobe Illustrator">
@@ -511,7 +535,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
               <input type="checkbox" id="cbDeaf" checked> Self-Deafen (Zero Bandwidth)
             </label>
           </div>
-          <button class="btn-green" style="width: 100%; height: 42px; font-size: 13px; margin-bottom: 8px;" onclick="joinVoiceRoom()">🟢 Join / Update Voice Room (24/7 AFK)</button>
+          <button class="btn-green" id="btnJoinVoice" style="width: 100%; height: 42px; font-size: 13px; margin-bottom: 8px;" onclick="joinVoiceRoom()">🟢 Join / Update Voice Room (24/7 AFK)</button>
           <button class="btn-red" style="width: 100%; height: 34px; font-size: 11px;" onclick="leaveVoiceRoom()">🔴 Leave Voice Room</button>
         </div>
       </div>
@@ -521,7 +545,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           <div class="card-title">📡 Live Room Telemetry</div>
           <div id="monStatus" style="font-size: 13px; font-weight: 700; color: var(--green); margin-bottom: 6px;">🟢 Status: Connected & In Voice Room (24/7 Cloud)</div>
           <div id="monUser" style="font-size: 12px; color: var(--text-secondary); margin: 4px 0;">Account: la2nis</div>
-          <div id="monRoom" style="font-size: 12px; color: var(--text-muted); margin: 4px 0;">Target Channel: 1557661172990480487</div>
+          <div id="monRoom" style="font-size: 12px; color: var(--text-muted); margin: 4px 0;">Active Voice Channel: 1484570674659070063</div>
           <div id="monUptime" style="font-size: 12px; color: var(--text-muted); margin: 4px 0;">Session Uptime: 00:00:00</div>
           <div id="monLatency" style="font-size: 11px; font-weight: 700; color: var(--green); margin-top: 6px;">Heartbeat Latency: 34 ms (Cloudflare Edge)</div>
         </div>
@@ -939,20 +963,79 @@ function searchQuestGame() {
 }
 
 /* VOICE ROOM AFK */
+async function loadUserGuilds() {
+  try {
+    const r = await fetch('/api/guilds');
+    const d = await r.json();
+    if (d.guilds && d.guilds.length) {
+      const sel = document.getElementById('selectGuildDropdown');
+      const currentGid = document.getElementById('entryGuildId').value.trim();
+      sel.innerHTML = d.guilds.map(g => `<option value="${g.id}" ${g.id === currentGid ? 'selected' : ''}>${g.name} (${g.id})</option>`).join('');
+    }
+  } catch (e) {}
+}
+
+function onGuildDropdownChange(gid) {
+  if (!gid) return;
+  document.getElementById('entryGuildId').value = gid;
+  loadGuildVoiceChannels(gid);
+}
+
+async function loadGuildVoiceChannels(gidOverride) {
+  const gid = gidOverride || document.getElementById('entryGuildId').value.trim() || '1442511921898192917';
+  try {
+    const r = await fetch('/api/channels?guild_id=' + encodeURIComponent(gid));
+    const d = await r.json();
+    if (d.channels && d.channels.length) {
+      const sel = document.getElementById('selectChannelDropdown');
+      const currentCid = document.getElementById('entryChannelId').value.trim();
+      sel.innerHTML = d.channels.map(c => `<option value="${c.id}" ${c.id === currentCid ? 'selected' : ''}>🔊 ${c.name} — ${c.id}</option>`).join('');
+      if (!d.channels.some(c => c.id === currentCid)) {
+        const jtc = d.channels.find(c => c.name.toUpperCase().includes('JOIN TO CREATE')) || d.channels[0];
+        if (jtc) {
+          sel.value = jtc.id;
+          document.getElementById('entryChannelId').value = jtc.id;
+        }
+      }
+    }
+  } catch (e) {}
+}
+
+function onChannelDropdownChange(cid) {
+  if (!cid) return;
+  document.getElementById('entryChannelId').value = cid;
+}
+
 async function joinVoiceRoom() {
   const guild_id = document.getElementById('entryGuildId').value.trim();
   const channel_id = document.getElementById('entryChannelId').value.trim();
   const self_mute = document.getElementById('cbMute').checked;
   const self_deaf = document.getElementById('cbDeaf').checked;
   const actName = document.getElementById('entryVoiceActivity').value.trim();
-  await fetch('/api/voice', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ action: 'join', guild_id, channel_id, self_mute, self_deaf, name: actName })
-  });
-  document.getElementById('monStatus').textContent = '🟢 Status: Connected & In Voice Room (24/7 Cloud)';
-  document.getElementById('monStatus').style.color = 'var(--green)';
-  document.getElementById('sidebarVoice').textContent = '🟢 Voice: In Room';
+  const btn = document.getElementById('btnJoinVoice');
+  if (btn) btn.textContent = '⏳ Connecting & Joining Voice Room...';
+  document.getElementById('monStatus').textContent = '⏳ Joining Voice Channel in Discord...';
+  document.getElementById('monStatus').style.color = 'var(--yellow)';
+
+  try {
+    const r = await fetch('/api/voice', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ action: 'join', guild_id, channel_id, self_mute, self_deaf, name: actName })
+    });
+    const d = await r.json();
+    const activeChan = d.channel_id || channel_id;
+    const chanLabel = d.channel_name ? `${d.channel_name} (${activeChan})` : activeChan;
+    document.getElementById('monStatus').textContent = '🟢 Status: Connected & In Voice Room: ' + chanLabel;
+    document.getElementById('monStatus').style.color = 'var(--green)';
+    document.getElementById('monRoom').textContent = 'Active Voice Channel: ' + chanLabel;
+    document.getElementById('sidebarVoice').textContent = '🟢 Voice: In Room';
+  } catch (e) {
+    document.getElementById('monStatus').textContent = '🔴 Error joining voice room: ' + e;
+    document.getElementById('monStatus').style.color = 'var(--red)';
+  } finally {
+    if (btn) btn.textContent = '🟢 Join / Update Voice Room (24/7 AFK)';
+  }
 }
 
 async function leaveVoiceRoom() {
@@ -1018,8 +1101,10 @@ async function refreshTelemetry() {
       document.getElementById('prevUsername').textContent = d.account;
       document.getElementById('monUser').textContent = 'Account: ' + d.account + ' (24/7 Cloud Connected)';
     }
-    if (d.channel_id) {
-      document.getElementById('monRoom').textContent = 'Target Channel: ' + d.channel_id;
+    if (d.active_channel_id || d.channel_id) {
+      const cid = d.active_channel_id || d.channel_id;
+      const cname = d.channel_name ? `${d.channel_name} (${cid})` : cid;
+      document.getElementById('monRoom').textContent = 'Active Voice Channel: ' + cname;
     }
     if (d.startTimestampMs) {
       startTimestampMs = d.startTimestampMs;
@@ -1031,6 +1116,7 @@ initGrids();
 updatePreview();
 searchCatalog();
 refreshTelemetry();
+loadGuildVoiceChannels();
 setInterval(refreshTelemetry, 6000);
 </script>
 </body>

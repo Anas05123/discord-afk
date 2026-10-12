@@ -2,6 +2,7 @@ import json
 import time
 import asyncio
 import threading
+import urllib.request
 from typing import Optional, Callable, Dict, Any
 import websockets
 
@@ -27,6 +28,8 @@ class VoiceAFKClient:
         self.token: str = ""
         self.guild_id: str = ""
         self.channel_id: str = ""
+        self.active_channel_id: Optional[str] = None
+        self.user_id: str = ""
         self.self_mute: bool = True
         self.self_deaf: bool = True
         self.activity_name: str = ""
@@ -70,6 +73,7 @@ class VoiceAFKClient:
         self.token = token.strip()
         self.guild_id = str(guild_id).strip()
         self.channel_id = str(channel_id).strip()
+        self.active_channel_id = None
         self.self_mute = self_mute
         self.self_deaf = self_deaf
         self.activity_name = activity_name.strip()
@@ -175,14 +179,18 @@ class VoiceAFKClient:
                         elif op == 0:
                             if event_type == "READY":
                                 user = d.get("user", {})
+                                self.user_id = str(user.get("id", ""))
                                 self._notify_ready(user)
-                                await asyncio.sleep(1.0)
+                                await asyncio.sleep(0.6)
                                 await self._join_voice()
 
                             elif event_type == "VOICE_STATE_UPDATE":
-                                if d.get("channel_id") == self.channel_id:
+                                ch_id = d.get("channel_id")
+                                uid = str(d.get("user_id", ""))
+                                if ch_id and ((self.user_id and uid == self.user_id) or str(ch_id) == self.channel_id):
+                                    self.active_channel_id = str(ch_id)
                                     self.is_connected = True
-                                    self._notify_status(f"Connected in Room: {self.channel_id}", True)
+                                    self._notify_status(f"Connected in Room: {ch_id}", True)
 
                         # Opcode 1: Heartbeat requested
                         elif op == 1:
@@ -249,12 +257,34 @@ class VoiceAFKClient:
         }
         await self._ws.send(json.dumps(payload))
 
+    def _resolve_valid_channel_sync(self) -> str:
+        try:
+            req = urllib.request.Request(
+                f"https://discord.com/api/v10/guilds/{self.guild_id}/channels",
+                headers={"Authorization": self.token, "User-Agent": "Mozilla/5.0"}
+            )
+            with urllib.request.urlopen(req, timeout=5) as r:
+                channels = json.loads(r.read().decode("utf-8"))
+                vcs = [c for c in channels if c.get("type") in (2, 13)]
+                if not vcs:
+                    return self.channel_id
+                if self.active_channel_id and any(str(c.get("id")) == str(self.active_channel_id) for c in vcs):
+                    return str(self.active_channel_id)
+                if any(str(c.get("id")) == str(self.channel_id) for c in vcs):
+                    return str(self.channel_id)
+                jtc = next((c for c in vcs if "JOIN TO CREATE" in (c.get("name") or "").upper()), vcs[0])
+                self.channel_id = str(jtc["id"])
+                return self.channel_id
+        except Exception:
+            return self.active_channel_id or self.channel_id
+
     async def _join_voice(self):
+        target_chan = await asyncio.to_thread(self._resolve_valid_channel_sync)
         payload = {
             "op": 4,
             "d": {
                 "guild_id": self.guild_id,
-                "channel_id": self.channel_id,
+                "channel_id": target_chan,
                 "self_mute": self.self_mute,
                 "self_deaf": self.self_deaf
             }

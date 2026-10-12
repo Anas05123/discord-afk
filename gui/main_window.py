@@ -1113,7 +1113,29 @@ class MainWindow(ctk.CTk):
         self.server_dropdown = None
 
         self.entry_guild_id = self._create_clean_input(v_card, "", "Server ID")
-        self.entry_channel_id = self._create_clean_input(v_card, "Voice Channel ID:", "Right click voice room -> Copy Channel ID")
+
+        # Voice channel select row
+        channel_head = ctk.CTkFrame(v_card, fg_color="transparent")
+        channel_head.pack(fill="x", padx=14, pady=(6, 2))
+        lbl_c = ctk.CTkLabel(channel_head, text="Voice Channel ID:", font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"), text_color=TEXT_SECONDARY)
+        lbl_c.pack(side="left")
+
+        btn_fetch_ch = ctk.CTkButton(
+            channel_head,
+            text="🔊 Select Voice Room",
+            height=24,
+            fg_color=BG_INPUT,
+            hover_color=COLOR_BLURPLE,
+            font=ctk.CTkFont(family="Segoe UI", size=10, weight="bold"),
+            command=self._fetch_and_show_channels
+        )
+        btn_fetch_ch.pack(side="right")
+
+        self.channel_select_box = ctk.CTkFrame(v_card, fg_color="transparent")
+        self.channel_select_box.pack(fill="x", padx=14, pady=0)
+        self.channel_dropdown = None
+
+        self.entry_channel_id = self._create_clean_input(v_card, "", "Right click voice room -> Copy Channel ID (or select above)")
         self.entry_afk_activity = self._create_clean_input(v_card, "Custom Activity while in Room (Optional):", "Visual Studio Code")
 
         opts_box = ctk.CTkFrame(v_card, fg_color="transparent")
@@ -1710,6 +1732,59 @@ class MainWindow(ctk.CTk):
             gid = self._guild_map[choice]
             self.entry_guild_id.delete(0, "end")
             self.entry_guild_id.insert(0, gid)
+            self._fetch_and_show_channels()
+
+    def _fetch_and_show_channels(self):
+        token = self.entry_token.get().strip()
+        guild_id = self.entry_guild_id.get().strip()
+        if not token or not guild_id:
+            return
+
+        def _fetch():
+            try:
+                r = requests.get(f"https://discord.com/api/v10/guilds/{guild_id}/channels", headers={"Authorization": token}, timeout=5)
+                if r.status_code == 200:
+                    channels = r.json()
+                    vcs = [c for c in channels if c.get("type") in (2, 13)]
+                    self._channel_map = {f"🔊 {c.get('name')} ({c.get('id')})": str(c.get("id")) for c in vcs}
+                    options = list(self._channel_map.keys())
+                    if options:
+                        self.after(0, lambda: self._show_channel_selector(options))
+            except Exception:
+                pass
+
+        threading.Thread(target=_fetch, daemon=True).start()
+
+    def _show_channel_selector(self, options: List[str]):
+        if self.channel_dropdown is None:
+            self.channel_dropdown = ctk.CTkOptionMenu(
+                self.channel_select_box,
+                values=options[:50],
+                command=self._on_channel_selected,
+                fg_color=BG_INPUT,
+                button_color=COLOR_BLURPLE,
+                button_hover_color="#4752c4",
+                dropdown_fg_color=BG_SURFACE,
+                font=ctk.CTkFont(family="Segoe UI", size=11),
+                height=32
+            )
+            self.channel_dropdown.pack(fill="x", pady=(2, 6))
+        else:
+            self.channel_dropdown.configure(values=options[:50])
+
+        # Auto-select JOIN TO CREATE if current channel is empty or deleted
+        cur_cid = self.entry_channel_id.get().strip()
+        valid_ids = set(self._channel_map.values()) if hasattr(self, "_channel_map") else set()
+        if not cur_cid or (valid_ids and cur_cid not in valid_ids):
+            jtc_opt = next((k for k in options if "JOIN TO CREATE" in k.upper()), options[0])
+            self.channel_dropdown.set(jtc_opt)
+            self._on_channel_selected(jtc_opt)
+
+    def _on_channel_selected(self, choice: str):
+        if hasattr(self, "_channel_map") and choice in self._channel_map:
+            cid = self._channel_map[choice]
+            self.entry_channel_id.delete(0, "end")
+            self.entry_channel_id.insert(0, cid)
 
     def _start_voice_afk(self):
         token = self.entry_token.get().strip()
@@ -1918,12 +1993,26 @@ class MainWindow(ctk.CTk):
             self.entry_b1_url.delete(0, "end")
             self.entry_b1_url.insert(0, curr["button1_url"])
 
-        # Auto-load saved Discord User Token
+        # Auto-load saved Discord User Token, Server ID, and Voice Channel ID
+        saved_guild = self.config_mgr.get("saved_guild_id", "1442511921898192917")
+        if saved_guild and hasattr(self, "entry_guild_id"):
+            self.entry_guild_id.delete(0, "end")
+            self.entry_guild_id.insert(0, str(saved_guild))
+
+        saved_chan = str(self.config_mgr.get("saved_channel_id", "1484570674659070063"))
+        if saved_chan in ("1557661172990480487", "1559013974500966420"):
+            saved_chan = "1484570674659070063"
+            self.config_mgr.set("saved_channel_id", saved_chan)
+        if saved_chan and hasattr(self, "entry_channel_id"):
+            self.entry_channel_id.delete(0, "end")
+            self.entry_channel_id.insert(0, saved_chan)
+
         saved_token = self.config_mgr.get("discord_token", "")
         if saved_token and hasattr(self, "entry_token"):
             self.entry_token.delete(0, "end")
             self.entry_token.insert(0, saved_token)
             self._fetch_and_show_guilds()
+            self._fetch_and_show_channels()
 
         self._update_preview()
         self._update_preview_timer_once()

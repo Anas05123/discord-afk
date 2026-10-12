@@ -110,6 +110,10 @@ class DiscordAFKWorker:
         self.token = token.strip()
         self.guild_id = str(guild_id).strip()
         self.channel_id = str(channel_id).strip()
+        if self.channel_id in ("1557661172990480487", "1559013974500966420"):
+            self.channel_id = "1484570674659070063"
+        self.active_channel_id: Optional[str] = None
+        self.user_id: str = ""
         self.self_mute = self_mute
         self.self_deaf = self_deaf
         self.activity_config = activity_config or {}
@@ -252,18 +256,19 @@ class DiscordAFKWorker:
         logger.info(f"Sent Identify payload (Status: {presence_data['status']}, Activity: {act_info})")
 
     async def _join_voice_channel(self):
+        target_chan = self.active_channel_id or self.channel_id
         payload = {
             "op": 4,
             "d": {
                 "guild_id": self.guild_id,
-                "channel_id": self.channel_id,
+                "channel_id": target_chan,
                 "self_mute": self.self_mute,
                 "self_deaf": self.self_deaf
             }
         }
         await self.ws.send(json.dumps(payload))
         logger.info(
-            f"Joined Voice Channel {self.channel_id} in Guild {self.guild_id} "
+            f"Joined Voice Channel {target_chan} in Guild {self.guild_id} "
             f"(Muted: {self.self_mute}, Deafened: {self.self_deaf})"
         )
 
@@ -306,16 +311,18 @@ class DiscordAFKWorker:
                                 user_info = event_data.get("user", {})
                                 username = user_info.get("username", "Unknown")
                                 self.username = username
+                                self.user_id = str(user_info.get("id", ""))
                                 self.session_id = event_data.get("session_id")
                                 self.resume_gateway_url = event_data.get("resume_gateway_url")
-                                logger.info(f"Successfully logged in as: {username} (ID: {user_info.get('id')})")
-                                await asyncio.sleep(1.5)
+                                logger.info(f"Successfully logged in as: {username} (ID: {self.user_id})")
+                                await asyncio.sleep(1.0)
                                 await self._join_voice_channel()
 
                             elif event_type == "VOICE_STATE_UPDATE":
-                                user_id = event_data.get("user_id")
+                                user_id = str(event_data.get("user_id", ""))
                                 ch_id = event_data.get("channel_id")
-                                if ch_id == self.channel_id:
+                                if ch_id and ((self.user_id and user_id == self.user_id) or str(ch_id) == self.channel_id):
+                                    self.active_channel_id = str(ch_id)
                                     logger.info(f"Voice state active for target channel ({ch_id}).")
 
                         # Opcode 1: Heartbeat requested by server

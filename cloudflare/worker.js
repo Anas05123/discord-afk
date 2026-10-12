@@ -626,22 +626,46 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
     <div class="top-bar">
       <div>
         <div class="page-title">Voice Room AFK Connection</div>
-        <div class="page-sub">Join and remain in any Discord voice channel or AFK room 24/7 with automatic mute and deafen.</div>
+        <div class="page-sub">Join and remain in any Discord voice channel or AFK room 24/7 with automatic mute, deafen, and Join-to-Create room tracking.</div>
       </div>
     </div>
 
     <div class="split-grid">
       <div class="col-scroll">
         <div class="section-card">
-          <div class="card-title">🔐 Connection Credentials</div>
+          <div class="card-title">🔐 Connection Credentials & Live Room Picker</div>
           <div class="form-group">
-            <label class="form-label">Server ID (Guild ID):</label>
-            <input class="form-input" id="entryGuildId" value="1442511921898192917">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label class="form-label" style="margin:0;">Select Server (Guild):</label>
+              <button class="btn-secondary" style="height:24px; padding:0 10px; font-size:10px;" onclick="loadUserGuilds()">⚡ Load My Servers</button>
+            </div>
+            <select class="form-select" id="selectGuildDropdown" onchange="onGuildDropdownChange(this.value)" style="margin-bottom:6px;">
+              <option value="1442511921898192917">★ Main Server (1442511921898192917)</option>
+            </select>
+            <input class="form-input" id="entryGuildId" value="1442511921898192917" placeholder="Server ID (Guild ID)">
           </div>
+
           <div class="form-group">
-            <label class="form-label">Voice Channel ID:</label>
-            <input class="form-input" id="entryChannelId" value="1557661172990480487">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label class="form-label" style="margin:0;">Select Voice Room in Server:</label>
+              <button class="btn-secondary" style="height:24px; padding:0 10px; font-size:10px;" onclick="loadGuildVoiceChannels()">🔄 Refresh Voice Rooms</button>
+            </div>
+            <select class="form-select" id="selectChannelDropdown" onchange="onChannelDropdownChange(this.value)" style="margin-bottom:6px;">
+              <option value="1484570674659070063">🔊 ➕・JOIN TO CREATE (Auto-Creates Your Room) — 1484570674659070063</option>
+              <option value="1442511922565091382">🔊 🏢・𝖬𝖺𝗂𝗇 𝖫𝗈𝖻𝖻𝗒 — 1442511922565091382</option>
+              <option value="1475888620630966322">🔊 🕌︱بثّ القُرآن الكريم — 1475888620630966322</option>
+              <option value="1482608241316729035">🔊 📚・𝖲𝗍𝗎𝖽𝗒 𝖫𝗈𝗎𝗇𝗀𝖾 — 1482608241316729035</option>
+              <option value="1446993760977289276">🔊 🎸・𝖬𝗎𝗌𝗂𝖼 — 1446993760977289276</option>
+              <option value="1447784971023421663">🔊 🍿・𝖬𝗈𝗏𝗂𝖾 𝖳𝗂𝗆𝖾 — 1447784971023421663</option>
+              <option value="1460725269806584081">🔊 🗿・ 𝖫𝗈𝗇𝖾 𝖱𝖺𝗇𝗀𝖾𝗋 — 1460725269806584081</option>
+              <option value="1460725809600925706">🔊 🎸・ 𝖱𝗈𝖼𝗄 & 𝖱𝗈𝗅𝗅 — 1460725809600925706</option>
+              <option value="1460726493490577613">🔊 🎯・ 𝖳𝗁𝗋𝖾𝖾 𝖬𝗎𝗌𝗄𝖾𝗍𝖾𝖾𝗋𝗌 — 1460726493490577613</option>
+              <option value="1482580750267056269">🔊 ✨・ 𝖥𝗂𝗏𝖾 𝖲𝗍𝖺𝗋𝗌 — 1482580750267056269</option>
+              <option value="1496634010980319263">🔊 🧬・ 𝖥𝖺𝗇𝗍𝖺𝗌𝗍𝗂𝖼 𝖥𝗈𝗎𝗋 — 1496634010980319263</option>
+            </select>
+            <input class="form-input" id="entryChannelId" value="1484570674659070063" placeholder="Voice Channel ID (or pick from dropdown above)">
           </div>
+
           <div class="form-group">
             <label class="form-label">Custom Activity while in Room (Optional):</label>
             <input class="form-input" id="entryVoiceActivity" value="Adobe Illustrator">
@@ -654,7 +678,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
               <input type="checkbox" id="cbDeaf" checked> Self-Deafen (Zero Bandwidth)
             </label>
           </div>
-          <button class="btn-green" style="width: 100%; height: 42px; font-size: 13px; margin-bottom: 8px;" onclick="joinVoiceRoom()">🟢 Join / Update Voice Room (24/7 AFK)</button>
+          <button class="btn-green" id="btnJoinVoice" style="width: 100%; height: 42px; font-size: 13px; margin-bottom: 8px;" onclick="joinVoiceRoom()">🟢 Join / Update Voice Room (24/7 AFK)</button>
           <button class="btn-red" style="width: 100%; height: 34px; font-size: 11px;" onclick="leaveVoiceRoom()">🔴 Leave Voice Room</button>
         </div>
       </div>
@@ -664,7 +688,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
           <div class="card-title">📡 Live Room Telemetry</div>
           <div id="monStatus" style="font-size: 13px; font-weight: 700; color: var(--green); margin-bottom: 6px;">🟢 Status: Connected & In Voice Room (24/7 Cloud)</div>
           <div id="monUser" style="font-size: 12px; color: var(--text-secondary); margin: 4px 0;">Account: la2nis</div>
-          <div id="monRoom" style="font-size: 12px; color: var(--text-muted); margin: 4px 0;">Target Channel: 1557661172990480487</div>
+          <div id="monRoom" style="font-size: 12px; color: var(--text-muted); margin: 4px 0;">Active Voice Channel: 1484570674659070063</div>
           <div id="monUptime" style="font-size: 12px; color: var(--text-muted); margin: 4px 0;">Session Uptime: 00:00:00</div>
           <div id="monLatency" style="font-size: 11px; font-weight: 700; color: var(--green); margin-top: 6px;">Heartbeat Latency: 34 ms (Cloudflare Edge)</div>
         </div>
@@ -1082,20 +1106,79 @@ function searchQuestGame() {
 }
 
 /* VOICE ROOM AFK */
+async function loadUserGuilds() {
+  try {
+    const r = await fetch('/api/guilds');
+    const d = await r.json();
+    if (d.guilds && d.guilds.length) {
+      const sel = document.getElementById('selectGuildDropdown');
+      const currentGid = document.getElementById('entryGuildId').value.trim();
+      sel.innerHTML = d.guilds.map(g => \`<option value="\${g.id}" \${g.id === currentGid ? 'selected' : ''}>\${g.name} (\${g.id})</option>\`).join('');
+    }
+  } catch (e) {}
+}
+
+function onGuildDropdownChange(gid) {
+  if (!gid) return;
+  document.getElementById('entryGuildId').value = gid;
+  loadGuildVoiceChannels(gid);
+}
+
+async function loadGuildVoiceChannels(gidOverride) {
+  const gid = gidOverride || document.getElementById('entryGuildId').value.trim() || '1442511921898192917';
+  try {
+    const r = await fetch('/api/channels?guild_id=' + encodeURIComponent(gid));
+    const d = await r.json();
+    if (d.channels && d.channels.length) {
+      const sel = document.getElementById('selectChannelDropdown');
+      const currentCid = document.getElementById('entryChannelId').value.trim();
+      sel.innerHTML = d.channels.map(c => \`<option value="\${c.id}" \${c.id === currentCid ? 'selected' : ''}>🔊 \${c.name} — \${c.id}</option>\`).join('');
+      if (!d.channels.some(c => c.id === currentCid)) {
+        const jtc = d.channels.find(c => c.name.toUpperCase().includes('JOIN TO CREATE')) || d.channels[0];
+        if (jtc) {
+          sel.value = jtc.id;
+          document.getElementById('entryChannelId').value = jtc.id;
+        }
+      }
+    }
+  } catch (e) {}
+}
+
+function onChannelDropdownChange(cid) {
+  if (!cid) return;
+  document.getElementById('entryChannelId').value = cid;
+}
+
 async function joinVoiceRoom() {
   const guild_id = document.getElementById('entryGuildId').value.trim();
   const channel_id = document.getElementById('entryChannelId').value.trim();
   const self_mute = document.getElementById('cbMute').checked;
   const self_deaf = document.getElementById('cbDeaf').checked;
   const actName = document.getElementById('entryVoiceActivity').value.trim();
-  await fetch('/api/voice', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ action: 'join', guild_id, channel_id, self_mute, self_deaf, name: actName })
-  });
-  document.getElementById('monStatus').textContent = '🟢 Status: Connected & In Voice Room (24/7 Cloud)';
-  document.getElementById('monStatus').style.color = 'var(--green)';
-  document.getElementById('sidebarVoice').textContent = '🟢 Voice: In Room';
+  const btn = document.getElementById('btnJoinVoice');
+  if (btn) btn.textContent = '⏳ Connecting & Joining Voice Room...';
+  document.getElementById('monStatus').textContent = '⏳ Joining Voice Channel in Discord...';
+  document.getElementById('monStatus').style.color = 'var(--yellow)';
+
+  try {
+    const r = await fetch('/api/voice', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ action: 'join', guild_id, channel_id, self_mute, self_deaf, name: actName })
+    });
+    const d = await r.json();
+    const activeChan = d.channel_id || channel_id;
+    const chanLabel = d.channel_name ? \`\${d.channel_name} (\${activeChan})\` : activeChan;
+    document.getElementById('monStatus').textContent = '🟢 Status: Connected & In Voice Room: ' + chanLabel;
+    document.getElementById('monStatus').style.color = 'var(--green)';
+    document.getElementById('monRoom').textContent = 'Active Voice Channel: ' + chanLabel;
+    document.getElementById('sidebarVoice').textContent = '🟢 Voice: In Room';
+  } catch (e) {
+    document.getElementById('monStatus').textContent = '🔴 Error joining voice room: ' + e;
+    document.getElementById('monStatus').style.color = 'var(--red)';
+  } finally {
+    if (btn) btn.textContent = '🟢 Join / Update Voice Room (24/7 AFK)';
+  }
 }
 
 async function leaveVoiceRoom() {
@@ -1161,8 +1244,10 @@ async function refreshTelemetry() {
       document.getElementById('prevUsername').textContent = d.account;
       document.getElementById('monUser').textContent = 'Account: ' + d.account + ' (24/7 Cloud Connected)';
     }
-    if (d.channel_id) {
-      document.getElementById('monRoom').textContent = 'Target Channel: ' + d.channel_id;
+    if (d.active_channel_id || d.channel_id) {
+      const cid = d.active_channel_id || d.channel_id;
+      const cname = d.channel_name ? \`\${d.channel_name} (\${cid})\` : cid;
+      document.getElementById('monRoom').textContent = 'Active Voice Channel: ' + cname;
     }
     if (d.startTimestampMs) {
       startTimestampMs = d.startTimestampMs;
@@ -1174,10 +1259,14 @@ initGrids();
 updatePreview();
 searchCatalog();
 refreshTelemetry();
+loadGuildVoiceChannels();
 setInterval(refreshTelemetry, 6000);
 </script>
 </body>
 </html>`;
+
+const DELETED_OLD_CHANNELS = new Set(["1557661172990480487", "1559013974500966420"]);
+const DEFAULT_JTC_CHANNEL = "1484570674659070063"; // ➕・JOIN TO CREATE in 1442511921898192917
 
 export class DiscordAFKSession {
   constructor(ctx, env) {
@@ -1185,11 +1274,16 @@ export class DiscordAFKSession {
     this.env = env;
     this.ws = null;
     this.sequence = null;
+    this.userId = "974719260779765790";
     this.username = "la2nis";
     this.connected = false;
+    this.inVoice = false;
     this.lastHeartbeat = 0;
     this.guildId = env.GUILD_ID || "1442511921898192917";
-    this.channelId = env.CHANNEL_ID || "1557661172990480487";
+    const envChan = env.CHANNEL_ID && !DELETED_OLD_CHANNELS.has(String(env.CHANNEL_ID)) ? String(env.CHANNEL_ID) : DEFAULT_JTC_CHANNEL;
+    this.channelId = envChan;
+    this.activeChannelId = null;
+    this.channelName = "➕・JOIN TO CREATE";
     this.selfMute = true;
     this.selfDeaf = true;
     this.activity = { ...PRESETS.illustrator };
@@ -1202,11 +1296,68 @@ export class DiscordAFKSession {
     const savedUser = await this.ctx.storage.get("username");
     const savedGuild = await this.ctx.storage.get("guildId");
     const savedChan = await this.ctx.storage.get("channelId");
+    const savedActiveChan = await this.ctx.storage.get("activeChannelId");
+    const savedChanName = await this.ctx.storage.get("channelName");
     if (savedAct) this.activity = savedAct;
     if (savedStart) this.startTimestampMs = savedStart;
     if (savedUser) this.username = savedUser;
     if (savedGuild) this.guildId = savedGuild;
-    if (savedChan) this.channelId = savedChan;
+    if (savedChan && !DELETED_OLD_CHANNELS.has(String(savedChan))) {
+      this.channelId = String(savedChan);
+    } else if (savedChan && DELETED_OLD_CHANNELS.has(String(savedChan))) {
+      this.channelId = DEFAULT_JTC_CHANNEL;
+      await this.ctx.storage.put("channelId", this.channelId);
+    }
+    if (savedActiveChan && !DELETED_OLD_CHANNELS.has(String(savedActiveChan))) {
+      this.activeChannelId = String(savedActiveChan);
+    }
+    if (savedChanName) this.channelName = savedChanName;
+  }
+
+  async resolveValidChannel(token) {
+    try {
+      const r = await fetch(\`https://discord.com/api/v10/guilds/\${this.guildId}/channels\`, {
+        headers: {
+          Authorization: token.trim(),
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+      });
+      if (!r.ok) return this.activeChannelId || this.channelId;
+      const channels = await r.json();
+      const voiceChannels = channels.filter(c => c.type === 2 || c.type === 13);
+      if (!voiceChannels.length) return this.channelId;
+
+      // 1. If we were moved into a personal Join-to-Create room and it still exists, stay in it!
+      if (this.activeChannelId) {
+        const activeFound = voiceChannels.find(c => String(c.id) === String(this.activeChannelId));
+        if (activeFound) {
+          this.channelName = activeFound.name;
+          await this.ctx.storage.put("channelName", this.channelName);
+          return String(activeFound.id);
+        }
+        this.activeChannelId = null;
+        await this.ctx.storage.delete("activeChannelId");
+      }
+
+      // 2. Check if requested channelId exists
+      const reqFound = voiceChannels.find(c => String(c.id) === String(this.channelId));
+      if (reqFound) {
+        this.channelName = reqFound.name;
+        await this.ctx.storage.put("channelName", this.channelName);
+        return String(reqFound.id);
+      }
+
+      // 3. Otherwise fallback to JOIN TO CREATE or Main Lobby
+      const jtc = voiceChannels.find(c => (c.name || "").toUpperCase().includes("JOIN TO CREATE")) || voiceChannels[0];
+      if (jtc) {
+        this.channelId = String(jtc.id);
+        this.channelName = jtc.name;
+        await this.ctx.storage.put("channelId", this.channelId);
+        await this.ctx.storage.put("channelName", this.channelName);
+        return this.channelId;
+      }
+    } catch (e) {}
+    return this.activeChannelId || this.channelId;
   }
 
   buildPresencePayload() {
@@ -1231,25 +1382,39 @@ export class DiscordAFKSession {
     };
   }
 
-  async ensureConnected() {
+  async ensureConnected(forceRejoin = false) {
     await this.initState();
     const token = this.env.DISCORD_TOKEN;
     if (!token) {
       return { error: "Missing DISCORD_TOKEN" };
     }
 
+    const targetChannel = await this.resolveValidChannel(token);
+
     if (this.ws && this.connected) {
-      if (Date.now() - this.lastHeartbeat >= 20000) {
-        try {
+      try {
+        if (forceRejoin || !this.inVoice) {
+          this.ws.send(JSON.stringify({
+            op: 4,
+            d: {
+              guild_id: String(this.guildId).trim(),
+              channel_id: String(targetChannel).trim(),
+              self_mute: this.selfMute,
+              self_deaf: this.selfDeaf
+            }
+          }));
+          await new Promise(r => setTimeout(r, 1500));
+        } else if (Date.now() - this.lastHeartbeat >= 12000) {
           this.ws.send(JSON.stringify({ op: 1, d: this.sequence }));
           this.lastHeartbeat = Date.now();
-        } catch (e) {
-          this.connected = false;
-          this.ws = null;
         }
+        await this.ctx.storage.setAlarm(Date.now() + 15000);
+        return { status: "online", account: this.username, channel_id: this.activeChannelId || targetChannel };
+      } catch (e) {
+        this.connected = false;
+        this.inVoice = false;
+        this.ws = null;
       }
-      await this.ctx.storage.setAlarm(Date.now() + 25000);
-      return { status: "online", account: this.username };
     }
 
     try {
@@ -1264,7 +1429,8 @@ export class DiscordAFKSession {
       this.lastHeartbeat = Date.now();
 
       await new Promise((resolve) => {
-        const timeout = setTimeout(resolve, 2200);
+        const timeout = setTimeout(resolve, 9000);
+        let settleTimer = null;
         ws.addEventListener("message", (event) => {
           try {
             const data = JSON.parse(event.data);
@@ -1282,37 +1448,58 @@ export class DiscordAFKSession {
                 }
               }));
             } else if (data.op === 0 && data.t === "READY") {
+              if (data.d?.user?.id) this.userId = String(data.d.user.id);
               if (data.d?.user?.username) {
                 this.username = data.d.user.username;
                 this.ctx.storage.put("username", this.username);
               }
-              ws.send(JSON.stringify({
-                op: 4,
-                d: {
-                  guild_id: String(this.guildId).trim(),
-                  channel_id: String(this.channelId).trim(),
-                  self_mute: this.selfMute,
-                  self_deaf: this.selfDeaf
+              setTimeout(() => {
+                try {
+                  ws.send(JSON.stringify({
+                    op: 4,
+                    d: {
+                      guild_id: String(this.guildId).trim(),
+                      channel_id: String(targetChannel).trim(),
+                      self_mute: this.selfMute,
+                      self_deaf: this.selfDeaf
+                    }
+                  }));
+                } catch (e) {}
+              }, 350);
+            } else if (data.op === 0 && data.t === "VOICE_STATE_UPDATE") {
+              if (data.d?.user_id === this.userId) {
+                if (data.d.channel_id) {
+                  this.inVoice = true;
+                  this.activeChannelId = String(data.d.channel_id);
+                  this.ctx.storage.put("activeChannelId", this.activeChannelId);
+                  if (settleTimer) clearTimeout(settleTimer);
+                  // Wait 1.4s in case JOIN TO CREATE moves us into our personal room
+                  settleTimer = setTimeout(() => {
+                    clearTimeout(timeout);
+                    resolve();
+                  }, 1400);
+                } else {
+                  this.inVoice = false;
                 }
-              }));
-              clearTimeout(timeout);
-              resolve();
+              }
             } else if (data.op === 1) {
               ws.send(JSON.stringify({ op: 1, d: this.sequence }));
             } else if (data.op === 7 || data.op === 9) {
               this.connected = false;
+              this.inVoice = false;
               try { ws.close(); } catch (e) {}
             }
           } catch (err) {}
         });
-        ws.addEventListener("close", () => { this.connected = false; this.ws = null; clearTimeout(timeout); resolve(); });
-        ws.addEventListener("error", () => { this.connected = false; this.ws = null; clearTimeout(timeout); resolve(); });
+        ws.addEventListener("close", () => { this.connected = false; this.inVoice = false; this.ws = null; clearTimeout(timeout); resolve(); });
+        ws.addEventListener("error", () => { this.connected = false; this.inVoice = false; this.ws = null; clearTimeout(timeout); resolve(); });
       });
 
-      await this.ctx.storage.setAlarm(Date.now() + 25000);
-      return { status: "online", account: this.username };
+      await this.ctx.storage.setAlarm(Date.now() + 15000);
+      return { status: "online", account: this.username, channel_id: this.activeChannelId || targetChannel };
     } catch (err) {
       this.connected = false;
+      this.inVoice = false;
       this.ws = null;
       await this.ctx.storage.setAlarm(Date.now() + 10000);
       return { error: String(err) };
@@ -1325,6 +1512,86 @@ export class DiscordAFKSession {
 
   async fetch(request) {
     const url = new URL(request.url);
+    const token = (this.env.DISCORD_TOKEN || "").trim();
+
+    if (request.method === "GET" && url.pathname.startsWith("/api/guilds")) {
+      try {
+        const r = await fetch("https://discord.com/api/v10/users/@me/guilds", {
+          headers: { Authorization: token, "User-Agent": "Mozilla/5.0" }
+        });
+        const guilds = r.ok ? await r.json() : [];
+        return new Response(JSON.stringify({ ok: true, guilds }), { headers: { "Content-Type": "application/json" } });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, guilds: [] }), { headers: { "Content-Type": "application/json" } });
+      }
+    }
+
+    if (request.method === "GET" && url.pathname.startsWith("/api/channels")) {
+      const gid = url.searchParams.get("guild_id") || this.guildId;
+      try {
+        const r = await fetch(\`https://discord.com/api/v10/guilds/\${gid}/channels\`, {
+          headers: { Authorization: token, "User-Agent": "Mozilla/5.0" }
+        });
+        const all = r.ok ? await r.json() : [];
+        const channels = all
+          .filter(c => c.type === 2 || c.type === 13)
+          .map(c => ({ id: String(c.id), name: c.name, type: c.type }));
+        return new Response(JSON.stringify({ ok: true, channels }), { headers: { "Content-Type": "application/json" } });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, channels: [] }), { headers: { "Content-Type": "application/json" } });
+      }
+    }
+
+    if (request.method === "POST" && url.pathname.startsWith("/api/voice")) {
+      await this.initState();
+      const body = await request.json().catch(() => ({}));
+      if (body.action === "leave") {
+        this.inVoice = false;
+        this.activeChannelId = null;
+        await this.ctx.storage.delete("activeChannelId");
+        if (this.ws && this.connected) {
+          try {
+            this.ws.send(JSON.stringify({
+              op: 4,
+              d: { guild_id: String(this.guildId), channel_id: null, self_mute: true, self_deaf: true }
+            }));
+          } catch (e) {}
+        }
+        return new Response(JSON.stringify({ ok: true, status: "left" }), { headers: { "Content-Type": "application/json" } });
+      }
+      if (body.guild_id) {
+        this.guildId = String(body.guild_id).trim();
+        await this.ctx.storage.put("guildId", this.guildId);
+      }
+      if (body.channel_id) {
+        this.channelId = String(body.channel_id).trim();
+        this.activeChannelId = null;
+        await this.ctx.storage.put("channelId", this.channelId);
+        await this.ctx.storage.delete("activeChannelId");
+      }
+      if (body.self_mute !== undefined) this.selfMute = Boolean(body.self_mute);
+      if (body.self_deaf !== undefined) this.selfDeaf = Boolean(body.self_deaf);
+      if (body.name) {
+        this.activity.name = body.name;
+        await this.ctx.storage.put("activity", this.activity);
+      }
+
+      // Force a verified connection + voice channel join
+      await this.ensureConnected(true);
+      await this.resolveValidChannel(token);
+
+      return new Response(JSON.stringify({
+        ok: true,
+        guild_id: this.guildId,
+        channel_id: this.activeChannelId || this.channelId,
+        requested_channel_id: this.channelId,
+        channel_name: this.channelName,
+        in_voice: this.inVoice
+      }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
     await this.ensureConnected();
 
     if (request.method === "POST" && url.pathname.startsWith("/api/activity")) {
@@ -1355,41 +1622,6 @@ export class DiscordAFKSession {
       });
     }
 
-    if (request.method === "POST" && url.pathname.startsWith("/api/voice")) {
-      const body = await request.json().catch(() => ({}));
-      if (body.action === "leave") {
-        if (this.ws && this.connected) {
-          try {
-            this.ws.send(JSON.stringify({
-              op: 4,
-              d: { guild_id: String(this.guildId), channel_id: null, self_mute: true, self_deaf: true }
-            }));
-          } catch (e) {}
-        }
-        return new Response(JSON.stringify({ ok: true, status: "left" }), { headers: { "Content-Type": "application/json" } });
-      }
-      if (body.guild_id) { this.guildId = String(body.guild_id); await this.ctx.storage.put("guildId", this.guildId); }
-      if (body.channel_id) { this.channelId = String(body.channel_id); await this.ctx.storage.put("channelId", this.channelId); }
-      if (body.self_mute !== undefined) this.selfMute = Boolean(body.self_mute);
-      if (body.self_deaf !== undefined) this.selfDeaf = Boolean(body.self_deaf);
-      if (this.ws && this.connected) {
-        try {
-          this.ws.send(JSON.stringify({
-            op: 4,
-            d: {
-              guild_id: String(this.guildId).trim(),
-              channel_id: String(this.channelId).trim(),
-              self_mute: this.selfMute,
-              self_deaf: this.selfDeaf
-            }
-          }));
-        } catch (e) {}
-      }
-      return new Response(JSON.stringify({ ok: true, guild_id: this.guildId, channel_id: this.channelId }), {
-        headers: { "Content-Type": "application/json" }
-      });
-    }
-
     const accept = request.headers.get("Accept") || "";
     if (!url.pathname.startsWith("/health") && (accept.includes("text/html") || url.pathname.startsWith("/dashboard"))) {
       return new Response(DASHBOARD_HTML, {
@@ -1401,8 +1633,12 @@ export class DiscordAFKSession {
       status: this.connected ? "online" : "reconnecting",
       service: "Discord Studio Pro — 24/7 Cloud Worker",
       account: this.username,
+      in_voice: this.inVoice,
       guild_id: this.guildId,
-      channel_id: this.channelId,
+      channel_id: this.activeChannelId || this.channelId,
+      active_channel_id: this.activeChannelId,
+      requested_channel_id: this.channelId,
+      channel_name: this.channelName,
       startTimestampMs: this.startTimestampMs,
       activity: this.activity
     }, null, 2), {
