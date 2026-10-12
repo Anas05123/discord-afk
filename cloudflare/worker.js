@@ -1316,7 +1316,7 @@ export class DiscordAFKSession {
 
   async resolveValidChannel(token) {
     try {
-      const r = await fetch(\`https://discord.com/api/v10/guilds/\${this.guildId}/channels\`, {
+      const r = await fetch("https://discord.com/api/v10/guilds/" + this.guildId + "/channels", {
         headers: {
           Authorization: token.trim(),
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -1529,7 +1529,7 @@ export class DiscordAFKSession {
     if (request.method === "GET" && url.pathname.startsWith("/api/channels")) {
       const gid = url.searchParams.get("guild_id") || this.guildId;
       try {
-        const r = await fetch(\`https://discord.com/api/v10/guilds/\${gid}/channels\`, {
+        const r = await fetch("https://discord.com/api/v10/guilds/" + gid + "/channels", {
           headers: { Authorization: token, "User-Agent": "Mozilla/5.0" }
         });
         const all = r.ok ? await r.json() : [];
