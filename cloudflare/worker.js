@@ -1459,10 +1459,11 @@ export class DiscordAFKSession {
                 try { ws.send(JSON.stringify({ op: 1, d: this.sequence })); } catch (e) {}
               }, hbInterval);
 
+              log("sending op 2 token:" + (token ? token.substring(0, 8) + "..." : "NONE"));
               ws.send(JSON.stringify({
                 op: 2,
                 d: {
-                  token: token.trim(),
+                  token: (token || "").trim(),
                   capabilities: 30717,
                   properties: { os: "Windows", browser: "Chrome", device: "", system_locale: "en-US" },
                   presence: { status: "online", since: 0, activities: [], afk: true },
@@ -1470,6 +1471,7 @@ export class DiscordAFKSession {
                   client_state: { guild_versions: {} }
                 }
               }));
+              log("op 2 sent successfully");
             } else if (data.op === 0 && data.t === "READY") {
               if (data.d?.user?.id) this.userId = String(data.d.user.id);
               if (data.d?.user?.username) {
@@ -1515,8 +1517,9 @@ export class DiscordAFKSession {
               this.connected = false;
               this.inVoice = false;
               try { ws.close(); } catch (e) {}
-            }
-          } catch (err) {}
+          } catch (err) {
+            log("onmessage err: " + String(err));
+          }
         });
         ws.addEventListener("close", (e) => {
           log("ws close code:" + e.code + " reason:" + e.reason);
@@ -1695,7 +1698,7 @@ export class DiscordAFKSession {
 
 export default {
   async fetch(request, env) {
-    const id = env.DISCORD_AFK_SESSION.idFromName("global-24-7-afk-v3");
+    const id = env.DISCORD_AFK_SESSION.idFromName("global-24-7-afk-v4");
     const stub = env.DISCORD_AFK_SESSION.get(id);
     return stub.fetch(request);
   }
