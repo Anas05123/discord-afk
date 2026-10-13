@@ -1417,23 +1417,40 @@ export class DiscordAFKSession {
       }
     }
 
+    this.debugLogs = this.debugLogs || [];
+    const log = (msg) => {
+      this.debugLogs.push(new Date().toISOString().substring(11, 19) + " " + msg);
+      if (this.debugLogs.length > 20) this.debugLogs.shift();
+    };
+
     try {
       const resp = await fetch("https://gateway.discord.gg/?v=10&encoding=json", {
-        headers: { Upgrade: "websocket" }
+        headers: {
+          Upgrade: "websocket",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
       });
       const ws = resp.webSocket;
-      if (!ws) return { error: "WebSocket upgrade failed" };
+      log("fetch status: " + resp.status + " hasWS: " + Boolean(ws));
+      if (!ws) {
+        log("No websocket in response");
+        return { error: "WebSocket upgrade failed" };
+      }
       ws.accept();
       this.ws = ws;
       this.connected = true;
       this.lastHeartbeat = Date.now();
 
       await new Promise((resolve) => {
-        const timeout = setTimeout(resolve, 9000);
+        const timeout = setTimeout(() => {
+          log("settle timeout 9s fired");
+          resolve();
+        }, 9000);
         let settleTimer = null;
         ws.addEventListener("message", (event) => {
           try {
             const data = JSON.parse(event.data);
+            log("msg op:" + data.op + (data.t ? " t:" + data.t : ""));
             if (data.s !== null && data.s !== undefined) this.sequence = data.s;
             if (data.op === 10) {
               ws.send(JSON.stringify({
@@ -1491,13 +1508,28 @@ export class DiscordAFKSession {
             }
           } catch (err) {}
         });
-        ws.addEventListener("close", () => { this.connected = false; this.inVoice = false; this.ws = null; clearTimeout(timeout); resolve(); });
-        ws.addEventListener("error", () => { this.connected = false; this.inVoice = false; this.ws = null; clearTimeout(timeout); resolve(); });
+        ws.addEventListener("close", (e) => {
+          log("ws close code:" + e.code + " reason:" + e.reason);
+          this.connected = false;
+          this.inVoice = false;
+          this.ws = null;
+          clearTimeout(timeout);
+          resolve();
+        });
+        ws.addEventListener("error", (e) => {
+          log("ws error: " + (e?.message || "unknown"));
+          this.connected = false;
+          this.inVoice = false;
+          this.ws = null;
+          clearTimeout(timeout);
+          resolve();
+        });
       });
 
       await this.ctx.storage.setAlarm(Date.now() + 15000);
       return { status: "online", account: this.username, channel_id: this.activeChannelId || targetChannel };
     } catch (err) {
+      log("catch err: " + String(err));
       this.connected = false;
       this.inVoice = false;
       this.ws = null;
@@ -1640,7 +1672,8 @@ export class DiscordAFKSession {
       requested_channel_id: this.channelId,
       channel_name: this.channelName,
       startTimestampMs: this.startTimestampMs,
-      activity: this.activity
+      activity: this.activity,
+      debug_logs: this.debugLogs || []
     }, null, 2), {
       headers: { "Content-Type": "application/json" }
     });
