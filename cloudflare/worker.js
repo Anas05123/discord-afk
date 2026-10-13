@@ -1517,6 +1517,7 @@ export class DiscordAFKSession {
               this.connected = false;
               this.inVoice = false;
               try { ws.close(); } catch (e) {}
+            }
           } catch (err) {
             log("onmessage err: " + String(err));
           }
