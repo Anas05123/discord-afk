@@ -1308,9 +1308,8 @@ export class DiscordAFKSession {
       this.channelId = DEFAULT_JTC_CHANNEL;
       await this.ctx.storage.put("channelId", this.channelId);
     }
-    if (savedActiveChan && !DELETED_OLD_CHANNELS.has(String(savedActiveChan))) {
-      this.activeChannelId = String(savedActiveChan);
-    }
+    const savedInVoice = await this.ctx.storage.get("inVoice");
+    if (savedInVoice !== undefined) this.inVoice = Boolean(savedInVoice);
     if (savedChanName) this.channelName = savedChanName;
   }
 
@@ -1592,18 +1591,13 @@ export class DiscordAFKSession {
       const body = await request.json().catch(() => ({}));
       if (body.action === "leave") {
         this.inVoice = false;
+        await this.ctx.storage.put("inVoice", false);
         this.activeChannelId = null;
         await this.ctx.storage.delete("activeChannelId");
-        if (this.ws && this.connected) {
-          try {
-            this.ws.send(JSON.stringify({
-              op: 4,
-              d: { guild_id: String(this.guildId), channel_id: null, self_mute: true, self_deaf: true }
-            }));
-          } catch (e) {}
-        }
         return new Response(JSON.stringify({ ok: true, status: "left" }), { headers: { "Content-Type": "application/json" } });
       }
+      this.inVoice = true;
+      await this.ctx.storage.put("inVoice", true);
       if (body.guild_id) {
         this.guildId = String(body.guild_id).trim();
         await this.ctx.storage.put("guildId", this.guildId);
@@ -1620,9 +1614,6 @@ export class DiscordAFKSession {
         this.activity.name = body.name;
         await this.ctx.storage.put("activity", this.activity);
       }
-
-      // Force a verified connection + voice channel join
-      await this.ensureConnected(true);
       await this.resolveValidChannel(token);
 
       return new Response(JSON.stringify({
@@ -1635,6 +1626,23 @@ export class DiscordAFKSession {
       }), {
         headers: { "Content-Type": "application/json" }
       });
+    }
+
+    if (request.method === "POST" && url.pathname.startsWith("/api/telemetry")) {
+      const body = await request.json().catch(() => ({}));
+      if (body.active_channel_id) {
+        this.activeChannelId = String(body.active_channel_id);
+        await this.ctx.storage.put("activeChannelId", this.activeChannelId);
+      }
+      if (body.channel_name) {
+        this.channelName = String(body.channel_name);
+        await this.ctx.storage.put("channelName", this.channelName);
+      }
+      if (body.in_voice !== undefined) {
+        this.inVoice = Boolean(body.in_voice);
+        await this.ctx.storage.put("inVoice", this.inVoice);
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
 
     await this.ensureConnected();
@@ -1675,7 +1683,7 @@ export class DiscordAFKSession {
     }
 
     return new Response(JSON.stringify({
-      status: this.connected ? "online" : "reconnecting",
+      status: this.inVoice ? "online" : "connected",
       service: "Discord Studio Pro — 24/7 Cloud Worker",
       account: this.username,
       in_voice: this.inVoice,
@@ -1695,7 +1703,7 @@ export class DiscordAFKSession {
 
 export default {
   async fetch(request, env) {
-    const id = env.DISCORD_AFK_SESSION.idFromName("global-24-7-afk-v6");
+    const id = env.DISCORD_AFK_SESSION.idFromName("global-24-7-afk-v7");
     const stub = env.DISCORD_AFK_SESSION.get(id);
     return stub.fetch(request);
   }
