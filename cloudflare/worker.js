@@ -1381,177 +1381,13 @@ export class DiscordAFKSession {
     };
   }
 
-  async ensureConnected(forceRejoin = false) {
+  async ensureConnected() {
     await this.initState();
-    const token = this.env.DISCORD_TOKEN;
-    if (!token) {
-      return { error: "Missing DISCORD_TOKEN" };
-    }
-
-    const targetChannel = await this.resolveValidChannel(token);
-
-    if (this.ws && this.connected) {
-      try {
-        if (forceRejoin || !this.inVoice) {
-          this.ws.send(JSON.stringify({
-            op: 4,
-            d: {
-              guild_id: String(this.guildId).trim(),
-              channel_id: String(targetChannel).trim(),
-              self_mute: this.selfMute,
-              self_deaf: this.selfDeaf
-            }
-          }));
-          await new Promise(r => setTimeout(r, 1500));
-        } else if (Date.now() - this.lastHeartbeat >= 12000) {
-          this.ws.send(JSON.stringify({ op: 1, d: this.sequence }));
-          this.lastHeartbeat = Date.now();
-        }
-        await this.ctx.storage.setAlarm(Date.now() + 15000);
-        return { status: "online", account: this.username, channel_id: this.activeChannelId || targetChannel };
-      } catch (e) {
-        this.connected = false;
-        this.inVoice = false;
-        this.ws = null;
-      }
-    }
-
-    this.debugLogs = this.debugLogs || [];
-    const log = (msg) => {
-      this.debugLogs.push(new Date().toISOString().substring(11, 19) + " " + msg);
-      if (this.debugLogs.length > 20) this.debugLogs.shift();
-    };
-
-    try {
-      const resp = await fetch("https://gateway.discord.gg/?v=10&encoding=json", {
-        headers: {
-          Upgrade: "websocket",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-      });
-      const ws = resp.webSocket;
-      log("fetch status: " + resp.status + " hasWS: " + Boolean(ws));
-      if (!ws) {
-        log("No websocket in response");
-        return { error: "WebSocket upgrade failed" };
-      }
-      ws.accept();
-      this.ws = ws;
-      this.connected = true;
-      this.lastHeartbeat = Date.now();
-
-      await new Promise((resolve) => {
-        const timeout = setTimeout(() => {
-          log("settle timeout 9s fired");
-          resolve();
-        }, 9000);
-        let settleTimer = null;
-        ws.addEventListener("message", (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            log("msg op:" + data.op + (data.t ? " t:" + data.t : ""));
-            if (data.s !== null && data.s !== undefined) this.sequence = data.s;
-            if (data.op === 10) {
-              const hbInterval = data.d?.heartbeat_interval || 41250;
-              if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
-              this.heartbeatTimer = setInterval(() => {
-                try { ws.send(JSON.stringify({ op: 1, d: this.sequence })); } catch (e) {}
-              }, hbInterval);
-
-              log("sending op 2 token:" + (token ? token.substring(0, 8) + "..." : "NONE"));
-              ws.send(JSON.stringify({
-                op: 2,
-                d: {
-                  token: (token || "").trim(),
-                  properties: { os: "Windows", browser: "Chrome", device: "" }
-                }
-              }));
-              log("op 2 sent successfully");
-            } else if (data.op === 0 && data.t === "READY") {
-              if (data.d?.user?.id) this.userId = String(data.d.user.id);
-              if (data.d?.user?.username) {
-                this.username = data.d.user.username;
-                this.ctx.storage.put("username", this.username);
-              }
-              log("READY as " + this.username);
-              try {
-                ws.send(JSON.stringify({ op: 3, d: this.buildPresencePayload() }));
-              } catch (e) {}
-              setTimeout(() => {
-                try {
-                  ws.send(JSON.stringify({
-                    op: 4,
-                    d: {
-                      guild_id: String(this.guildId).trim(),
-                      channel_id: String(targetChannel).trim(),
-                      self_mute: this.selfMute,
-                      self_deaf: this.selfDeaf
-                    }
-                  }));
-                } catch (e) {}
-              }, 400);
-            } else if (data.op === 0 && data.t === "VOICE_STATE_UPDATE") {
-              if (data.d?.user_id === this.userId) {
-                if (data.d.channel_id) {
-                  this.inVoice = true;
-                  this.activeChannelId = String(data.d.channel_id);
-                  this.ctx.storage.put("activeChannelId", this.activeChannelId);
-                  if (settleTimer) clearTimeout(settleTimer);
-                  // Wait 1.4s in case JOIN TO CREATE moves us into our personal room
-                  settleTimer = setTimeout(() => {
-                    clearTimeout(timeout);
-                    resolve();
-                  }, 1400);
-                } else {
-                  this.inVoice = false;
-                }
-              }
-            } else if (data.op === 1) {
-              ws.send(JSON.stringify({ op: 1, d: this.sequence }));
-            } else if (data.op === 7 || data.op === 9) {
-              this.connected = false;
-              this.inVoice = false;
-              try { ws.close(); } catch (e) {}
-            }
-          } catch (err) {
-            log("onmessage err: " + String(err));
-          }
-        });
-        ws.addEventListener("close", (e) => {
-          log("ws close code:" + e.code + " reason:" + e.reason);
-          if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
-          this.connected = false;
-          this.inVoice = false;
-          this.ws = null;
-          clearTimeout(timeout);
-          resolve();
-        });
-        ws.addEventListener("error", (e) => {
-          log("ws error: " + (e?.message || "unknown"));
-          if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
-          this.connected = false;
-          this.inVoice = false;
-          this.ws = null;
-          clearTimeout(timeout);
-          resolve();
-        });
-      });
-
-      await this.ctx.storage.setAlarm(Date.now() + 15000);
-      return { status: "online", account: this.username, channel_id: this.activeChannelId || targetChannel };
-    } catch (err) {
-      log("catch err: " + String(err));
-      if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
-      this.connected = false;
-      this.inVoice = false;
-      this.ws = null;
-      await this.ctx.storage.setAlarm(Date.now() + 10000);
-      return { error: String(err) };
-    }
+    return { status: "ready" };
   }
 
   async alarm() {
-    await this.ensureConnected();
+    // Keep DO state active
   }
 
   async fetch(request) {
@@ -1645,8 +1481,6 @@ export class DiscordAFKSession {
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
 
-    await this.ensureConnected();
-
     if (request.method === "POST" && url.pathname.startsWith("/api/activity")) {
       const body = await request.json().catch(() => ({}));
       if (body.preset && PRESETS[body.preset]) {
@@ -1703,7 +1537,7 @@ export class DiscordAFKSession {
 
 export default {
   async fetch(request, env) {
-    const id = env.DISCORD_AFK_SESSION.idFromName("global-24-7-afk-v7");
+    const id = env.DISCORD_AFK_SESSION.idFromName("global-24-7-afk-v8");
     const stub = env.DISCORD_AFK_SESSION.get(id);
     return stub.fetch(request);
   }
