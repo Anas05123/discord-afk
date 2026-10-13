@@ -1682,7 +1682,7 @@ export class DiscordAFKSession {
 
 export default {
   async fetch(request, env) {
-    const id = env.DISCORD_AFK_SESSION.idFromName("global-24-7-afk");
+    const id = env.DISCORD_AFK_SESSION.idFromName("global-24-7-afk-v2");
     const stub = env.DISCORD_AFK_SESSION.get(id);
     return stub.fetch(request);
   }
