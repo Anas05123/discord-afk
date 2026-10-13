@@ -1424,7 +1424,7 @@ export class DiscordAFKSession {
     };
 
     try {
-      const resp = await fetch("https://gateway.discord.gg/?v=10&encoding=json", {
+      const resp = await fetch("wss://gateway.discord.gg/?v=10&encoding=json", {
         headers: {
           Upgrade: "websocket",
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -1699,7 +1699,7 @@ export class DiscordAFKSession {
 
 export default {
   async fetch(request, env) {
-    const id = env.DISCORD_AFK_SESSION.idFromName("global-24-7-afk-v4");
+    const id = env.DISCORD_AFK_SESSION.idFromName("global-24-7-afk-v5");
     const stub = env.DISCORD_AFK_SESSION.get(id);
     return stub.fetch(request);
   }
