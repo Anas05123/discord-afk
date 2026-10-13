@@ -73,16 +73,7 @@ function connectGateway() {
               presence: {
                 status: "online",
                 since: 0,
-                activities: [
-                  {
-                    name: "Adobe Illustrator",
-                    application_id: "751430009716998144",
-                    type: 0,
-                    details: "Designing Brand_Identity.ai",
-                    state: "Vector Artboards & Pen Tool",
-                    timestamps: { start: Date.now() }
-                  }
-                ],
+                activities: [],
                 afk: true
               },
               compress: false,
@@ -116,7 +107,6 @@ function connectGateway() {
             activeChannelId = String(data.d.channel_id);
             console.log(`[VoiceDaemon] ✅ Active in Voice Room: ${activeChannelId}`);
           } else {
-            // Re-join if disconnected/kicked
             console.log("[VoiceDaemon] Voice state became null, re-joining in 3s...");
             activeChannelId = null;
             setTimeout(async () => {
@@ -145,13 +135,14 @@ function connectGateway() {
     } catch (e) {}
   });
 
-  ws.addEventListener("close", () => {
+  ws.addEventListener("close", (e) => {
     if (heartbeatTimer) clearInterval(heartbeatTimer);
-    console.log("[VoiceDaemon] Connection closed. Reconnecting in 4s...");
+    console.log(`[VoiceDaemon] Connection closed (code: ${e.code}, reason: ${e.reason}). Reconnecting in 4s...`);
     setTimeout(connectGateway, 4000);
   });
 
-  ws.addEventListener("error", () => {
+  ws.addEventListener("error", (err) => {
+    console.log(`[VoiceDaemon] WebSocket error: ${err.message || err}`);
     try { ws.close(); } catch (e) {}
   });
 }
