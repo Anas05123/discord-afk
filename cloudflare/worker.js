@@ -1453,13 +1453,19 @@ export class DiscordAFKSession {
             log("msg op:" + data.op + (data.t ? " t:" + data.t : ""));
             if (data.s !== null && data.s !== undefined) this.sequence = data.s;
             if (data.op === 10) {
+              const hbInterval = data.d?.heartbeat_interval || 41250;
+              if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+              this.heartbeatTimer = setInterval(() => {
+                try { ws.send(JSON.stringify({ op: 1, d: this.sequence })); } catch (e) {}
+              }, hbInterval);
+
               ws.send(JSON.stringify({
                 op: 2,
                 d: {
                   token: token.trim(),
                   capabilities: 30717,
                   properties: { os: "Windows", browser: "Chrome", device: "", system_locale: "en-US" },
-                  presence: this.buildPresencePayload(),
+                  presence: { status: "online", since: 0, activities: [], afk: true },
                   compress: false,
                   client_state: { guild_versions: {} }
                 }
@@ -1470,6 +1476,10 @@ export class DiscordAFKSession {
                 this.username = data.d.user.username;
                 this.ctx.storage.put("username", this.username);
               }
+              log("READY as " + this.username);
+              try {
+                ws.send(JSON.stringify({ op: 3, d: this.buildPresencePayload() }));
+              } catch (e) {}
               setTimeout(() => {
                 try {
                   ws.send(JSON.stringify({
@@ -1482,7 +1492,7 @@ export class DiscordAFKSession {
                     }
                   }));
                 } catch (e) {}
-              }, 350);
+              }, 400);
             } else if (data.op === 0 && data.t === "VOICE_STATE_UPDATE") {
               if (data.d?.user_id === this.userId) {
                 if (data.d.channel_id) {
@@ -1510,6 +1520,7 @@ export class DiscordAFKSession {
         });
         ws.addEventListener("close", (e) => {
           log("ws close code:" + e.code + " reason:" + e.reason);
+          if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
           this.connected = false;
           this.inVoice = false;
           this.ws = null;
@@ -1518,6 +1529,7 @@ export class DiscordAFKSession {
         });
         ws.addEventListener("error", (e) => {
           log("ws error: " + (e?.message || "unknown"));
+          if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
           this.connected = false;
           this.inVoice = false;
           this.ws = null;
@@ -1530,6 +1542,7 @@ export class DiscordAFKSession {
       return { status: "online", account: this.username, channel_id: this.activeChannelId || targetChannel };
     } catch (err) {
       log("catch err: " + String(err));
+      if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
       this.connected = false;
       this.inVoice = false;
       this.ws = null;
@@ -1682,7 +1695,7 @@ export class DiscordAFKSession {
 
 export default {
   async fetch(request, env) {
-    const id = env.DISCORD_AFK_SESSION.idFromName("global-24-7-afk-v2");
+    const id = env.DISCORD_AFK_SESSION.idFromName("global-24-7-afk-v3");
     const stub = env.DISCORD_AFK_SESSION.get(id);
     return stub.fetch(request);
   }
