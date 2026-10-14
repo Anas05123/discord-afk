@@ -15,7 +15,12 @@ try {
   cfg = {};
 }
 
-const TOKEN = (process.env.DISCORD_TOKEN || cfg.discord_token || "").trim();
+let rawToken = (process.env.DISCORD_TOKEN || cfg.discord_token || "").trim();
+rawToken = rawToken.replace(/^["'`\s]+|["'`\s]+$/g, "");
+if (rawToken.startsWith("Bot ")) {
+  rawToken = rawToken.slice(4).trim();
+}
+const TOKEN = rawToken;
 const WORKER_URL = (process.env.WORKER_URL || "https://discord-afk-keepalive.anas05123.workers.dev").replace(/\/$/, "");
 const PORT = process.env.PORT || 10000;
 
@@ -165,6 +170,7 @@ function connectGateway() {
     return;
   }
 
+  console.log(`[VoiceDaemon] 🔑 Token check: starts with "${TOKEN.slice(0, 6)}...", total length: ${TOKEN.length}`);
   console.log("[VoiceDaemon] 🚀 Connecting to Discord Gateway...");
   ws = new WebSocket("wss://gateway.discord.gg/?v=10&encoding=json");
 
@@ -227,6 +233,12 @@ function connectGateway() {
     isConnected = false;
     if (heartbeatTimer) clearInterval(heartbeatTimer);
     if (syncTimer) clearInterval(syncTimer);
+    if (e.code === 4004) {
+      console.error(`[VoiceDaemon] ❌ Authentication Failed (code: 4004)! The token was rejected by Discord.`);
+      console.error(`[VoiceDaemon] Token length: ${TOKEN.length}, preview: ${TOKEN.slice(0, 6)}...${TOKEN.slice(-4)}`);
+      console.error(`[VoiceDaemon] Please ensure DISCORD_TOKEN in GitHub Secrets contains the exact token without extra quotes or spaces.`);
+      process.exit(1);
+    }
     console.log(`[VoiceDaemon] Gateway closed (code: ${e.code}). Reconnecting in 4s...`);
     setTimeout(connectGateway, 4000);
   });
