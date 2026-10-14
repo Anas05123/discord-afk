@@ -1308,8 +1308,6 @@ export class DiscordAFKSession {
       this.channelId = DEFAULT_JTC_CHANNEL;
       await this.ctx.storage.put("channelId", this.channelId);
     }
-    const savedVoiceReq = await this.ctx.storage.get("voiceRequestedAt");
-    if (savedVoiceReq) this.voiceRequestedAt = savedVoiceReq;
     const savedInVoice = await this.ctx.storage.get("inVoice");
     if (savedInVoice !== undefined) this.inVoice = Boolean(savedInVoice);
     if (savedChanName) this.channelName = savedChanName;
@@ -1452,16 +1450,13 @@ export class DiscordAFKSession {
         this.activity.name = body.name;
         await this.ctx.storage.put("activity", this.activity);
       }
-      this.voiceRequestedAt = Date.now();
-    await this.ctx.storage.put("voiceRequestedAt", this.voiceRequestedAt);
-    await this.resolveValidChannel(token);
+      await this.resolveValidChannel(token);
 
       return new Response(JSON.stringify({
         ok: true,
         guild_id: this.guildId,
         channel_id: this.activeChannelId || this.channelId,
         requested_channel_id: this.channelId,
-      voice_requested_at: this.voiceRequestedAt || 0,
         channel_name: this.channelName,
         in_voice: this.inVoice
       }), {
@@ -1530,7 +1525,6 @@ export class DiscordAFKSession {
       channel_id: this.activeChannelId || this.channelId,
       active_channel_id: this.activeChannelId,
       requested_channel_id: this.channelId,
-      voice_requested_at: this.voiceRequestedAt || 0,
       channel_name: this.channelName,
       startTimestampMs: this.startTimestampMs,
       activity: this.activity,

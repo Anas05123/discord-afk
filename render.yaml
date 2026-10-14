@@ -1,29 +1,14 @@
 services:
   - type: web
-    name: discord-247-afk-worker
-    runtime: python
-    buildCommand: pip install -r cloud_afk/requirements.txt
-    startCommand: python -u cloud_afk/afk_worker.py
+    name: discord-247-afk
+    runtime: node
+    plan: free
+    buildCommand: npm install --omit=dev 2>/dev/null || true
+    startCommand: node cloud_afk/voice_daemon.mjs
     envVars:
       - key: DISCORD_TOKEN
         sync: false
-      - key: GUILD_ID
-        sync: false
-      - key: CHANNEL_ID
-        sync: false
-      - key: SELF_MUTE
-        value: "true"
-      - key: SELF_DEAF
-        value: "true"
       - key: PORT
         value: "10000"
-      - key: ACTIVITY_STATUS
-        value: "online"
-      - key: ACTIVITY_NAME
-        value: "Visual Studio Code"
-      - key: ACTIVITY_TYPE
-        value: "0"
-      - key: ACTIVITY_DETAILS
-        value: "Coding 24/7"
-      - key: ACTIVITY_STATE
-        value: "In Voice Channel"
+      - key: WORKER_URL
+        value: "https://discord-afk-keepalive.anas05123.workers.dev"

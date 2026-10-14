@@ -1,100 +1,84 @@
-# 24/7 Discord Voice Room AFK Worker — Complete Deployment Guide
+# 24/7 Discord Voice Room AFK Cloud Deployment Guide
 
-This guide explains how to deploy the AFK worker to a free cloud server so your Discord account stays in your desired voice room 24/7, **even when your computer is completely turned off**.
-
----
-
-## 1. Retrieve Required Discord IDs
-
-### A. Turn on Developer Mode
-1. Open Discord desktop or web.
-2. Go to **User Settings** (the gear icon ⚙️ next to your avatar).
-3. Scroll down on the left sidebar and select **Advanced**.
-4. Toggle **Developer Mode** to **ON**.
-
-### B. Copy Server (Guild) ID
-1. Right-click on the server icon in your server list.
-2. Click **Copy Server ID**.
-3. Save this value (this is your `GUILD_ID`).
-
-### C. Copy Voice Channel ID
-1. Right-click on the specific Voice Channel or AFK Room you want to stay in.
-2. Click **Copy Channel ID**.
-3. Save this value (this is your `CHANNEL_ID`).
+This guide explains how to deploy your Discord AFK Engine to the cloud for free, so your account stays in voice channels and shows your custom Rich Presence 24/7, **even when your PC is completely turned off**.
 
 ---
 
-## 2. Retrieve Your Discord User Token
+## 🚀 How It Works (Cloud Architecture)
 
-> [!WARNING]
-> Your Discord token acts as your digital password. **Never share it with anyone or commit it to a public GitHub repository.**
+1. **Cloud Control Plane (Dashboard)**:
+   - Hosted at: `https://discord-afk-keepalive.anas05123.workers.dev/dashboard`
+   - You can open this URL from your mobile phone, tablet, or browser anytime.
+   - When you pick a voice room or activity preset, it saves your choice in real time.
 
-1. Open your browser (Google Chrome, Edge, or Brave) and navigate to [https://discord.com/app](https://discord.com/app).
-2. Log into your account.
-3. Press `F12` (or `Ctrl + Shift + I`) to open the **Developer Tools**.
-4. Click on the **Network** tab in DevTools.
-5. In the filter box at the top, type `science` or `/api`.
-6. Click anywhere in Discord (e.g. click into a text channel or open settings).
-7. In the Network tab list, click any request (e.g. `science` or `messages`).
-8. On the right panel, scroll down to **Request Headers**.
-9. Locate the header named `authorization`.
-10. Copy the string value next to it (without the word "authorization:"). This is your `DISCORD_TOKEN`.
+2. **24/7 Cloud Voice Engine**:
+   - Runs in a free cloud container (Render.com or Koyeb.com).
+   - Polls your dashboard every 2.5 seconds to immediately apply any changes made from your phone.
+   - Connects directly to Discord Gateway:
+     - Stays in your target voice channel.
+     - Automatically adapts if server bots/admins move you to another channel (no fighting or disconnecting).
+     - Keeps you online with your selected Rich Presence game/app.
 
 ---
 
-## 3. Deploying 24/7 for Free on Render.com
+## ⚡ Option 1: Deploy Free on Render.com (Recommended & Easiest)
 
-Render offers free web service hosting that runs Docker or Python continuously.
+Render gives you 750 free hours per month (enough for 24/7 all month long).
 
-### Step 1: Upload to GitHub (Private Repository)
-1. Create a **Private** repository on [GitHub](https://github.com/new) (e.g. `discord-afk-worker`).
-2. Push the files inside the `cloud_afk/` folder:
-   - `afk_worker.py`
-   - `keep_alive.py`
-   - `requirements.txt`
-   - `Dockerfile`
-   - `render.yaml`
+### Step 1: Sign Up / Log In
+1. Go to [https://dashboard.render.com](https://dashboard.render.com).
+2. Sign in with your GitHub account (`Anas05123`).
 
-### Step 2: Create Web Service on Render
-1. Go to [https://render.com](https://render.com) and sign up / log in with GitHub.
-2. Click **New +** -> **Web Service**.
-3. Select your private repository.
-4. Settings:
+### Step 2: Create Web Service
+1. Click the **New +** button in the top right, then select **Web Service**.
+2. Select your repository: **`Anas05123/discord-afk`**.
+3. Configure the settings:
    - **Name**: `discord-247-afk`
-   - **Environment**: `Python` (or `Docker`)
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `python -u afk_worker.py`
-   - **Instance Type**: `Free`
-5. Scroll down to **Environment Variables** and add:
-   - `DISCORD_TOKEN` = `<your_token>`
-   - `GUILD_ID` = `<your_guild_id>`
-   - `CHANNEL_ID` = `<your_channel_id>`
-   - `SELF_MUTE` = `true`
-   - `SELF_DEAF` = `true`
-   - `PORT` = `10000`
-6. Click **Create Web Service**.
+   - **Region**: Choose the closest region (e.g. Frankfurt or Oregon).
+   - **Branch**: `main`
+   - **Runtime**: `Node`
+   - **Build Command**: `npm install --omit=dev || true`
+   - **Start Command**: `node cloud_afk/voice_daemon.mjs`
+   - **Instance Type**: **Free**
+4. Under **Environment Variables**, click **Add Environment Variable**:
+   - Key: `DISCORD_TOKEN`
+   - Value: `Your Discord User Token`
+   *(Optional)*:
+   - Key: `WORKER_URL`
+   - Value: `https://discord-afk-keepalive.anas05123.workers.dev`
+5. Click **Deploy Web Service**!
 
-### Step 3: Prevent Free Tier Sleep (24/7 Keep-Alive)
-Render free services spin down after 15 minutes of HTTP inactivity. The worker includes a built-in HTTP server on port 10000 to keep it awake!
-1. Copy your Render service URL (e.g. `https://discord-247-afk.onrender.com`).
+### Step 3: Prevent Free Tier Sleep (Keep Awake)
+Render's free web services sleep after 15 minutes of inactivity. To keep it awake 24/7:
+1. Copy your Render web service URL (e.g., `https://discord-247-afk.onrender.com`).
 2. Go to [cron-job.org](https://cron-job.org) or [uptimerobot.com](https://uptimerobot.com) (100% free).
-3. Create a free HTTP monitor that pings your URL every **10 minutes**.
-4. Your worker will now run uninterrupted 24 hours a day, 7 days a week!
+3. Create an HTTP monitor pinging your Render URL every **10 minutes**.
+4. That's it! Your worker will now run 24/7 non-stop!
 
 ---
 
-## 4. Alternative: Run on a Local 24/7 Device (Raspberry Pi or Phone)
+## 🛡️ Option 2: Deploy on Koyeb.com (Never Sleeps, 100% Free)
 
-If you have a Raspberry Pi or spare Android phone running Termux:
-```bash
-cd cloud_afk
-pip install -r requirements.txt
-python afk_worker.py
-```
+Koyeb offers a free Eco/Nano service that **does not sleep**, so you don't even need UptimeRobot!
+
+1. Go to [https://app.koyeb.com](https://app.koyeb.com) and log in with GitHub.
+2. Click **Create App** -> **GitHub**.
+3. Select `Anas05123/discord-afk`.
+4. Choose **Dockerfile** or **Node.js**:
+   - Run Command: `node cloud_afk/voice_daemon.mjs`
+5. Under **Environment Variables**, add:
+   - `DISCORD_TOKEN` = `Your Discord User Token`
+   - `PORT` = `10000`
+6. Click **Deploy**!
 
 ---
 
-## 5. Security & Safety Recommendations
-- **Self-Mute & Self-Deafen**: Always keep these set to `true`. This prevents microphone audio leaks and ensures you consume zero voice bandwidth.
-- **Do Not Rapidly Switch Rooms**: Rapidly jumping between voice channels triggers Discord gateway rate limits. Let the worker stay peacefully in your chosen room.
-- **Account Age**: Use an established Discord account rather than an account created minutes ago.
+## 📱 Controlling Everything from Your Phone
+
+Once deployed on Render or Koyeb:
+1. Shut down your PC completely.
+2. Open on your phone:
+   **`https://discord-afk-keepalive.anas05123.workers.dev/dashboard`**
+3. Select any voice room from the live dropdown and tap **Join Voice Room (AFK)**.
+4. Select any preset (e.g., *VALORANT*, *Visual Studio Code*, *Adobe Illustrator*).
+5. Open your Discord mobile app: You will see your account sitting in the voice channel with your custom activity live!

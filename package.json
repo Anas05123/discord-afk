@@ -1,0 +1,13 @@
+{
+  "name": "discord-247-afk",
+  "version": "1.0.0",
+  "description": "24/7 Discord Voice Room AFK & Rich Presence Cloud Daemon",
+  "type": "module",
+  "main": "cloud_afk/voice_daemon.mjs",
+  "scripts": {
+    "start": "node cloud_afk/voice_daemon.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

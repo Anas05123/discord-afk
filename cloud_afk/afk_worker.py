@@ -227,28 +227,12 @@ class DiscordAFKWorker:
             "op": 2,
             "d": {
                 "token": self.token,
-                "capabilities": 30717,
                 "properties": {
                     "os": "Windows",
                     "browser": "Chrome",
-                    "device": "",
-                    "system_locale": "en-US",
-                    "browser_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-                    "browser_version": "122.0.0.0",
-                    "os_version": "10",
-                    "referrer": "",
-                    "referring_domain": "",
-                    "referrer_current": "",
-                    "referring_domain_current": "",
-                    "release_channel": "stable",
-                    "client_build_number": 272840,
-                    "client_event_source": None
+                    "device": ""
                 },
-                "presence": presence_data,
-                "compress": False,
-                "client_state": {
-                    "guild_versions": {}
-                }
+                "presence": presence_data
             }
         }
         await self.ws.send(json.dumps(payload))

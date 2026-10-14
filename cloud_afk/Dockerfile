@@ -1,13 +1,13 @@
-FROM python:3.12-slim
+FROM node:22-alpine
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY package*.json ./
+RUN npm install --omit=dev 2>/dev/null || true
 
-COPY afk_worker.py keep_alive.py ./
+COPY . .
 
 ENV PORT=10000
 EXPOSE 10000
 
-CMD ["python", "-u", "afk_worker.py"]
+CMD ["node", "cloud_afk/voice_daemon.mjs"]
