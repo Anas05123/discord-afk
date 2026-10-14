@@ -1,0 +1,28 @@
+name: 24/7 Discord Voice AFK
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Runs automatically every 5 hours
+    - cron: '0 */5 * * *'
+
+jobs:
+  afk_runner:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Voice AFK Engine
+        env:
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+          WORKER_URL: https://discord-afk-keepalive.anas05123.workers.dev
+        run: |
+          echo "🚀 Starting 24/7 Discord Voice Engine on GitHub Actions Cloud..."
+          node cloud_afk/voice_daemon.mjs
