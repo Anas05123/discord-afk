@@ -96,7 +96,8 @@ async function syncWithCloudWorker() {
 
     // 2. Sync Voice Room State
     const shouldBeInVoice = remote.in_voice !== false;
-    const targetChan = remote.channel_id || "1484570674659070063";
+    // Always target permanent lobby on fresh joins; never target deleted temporary channels!
+    const targetChan = remote.requested_channel_id || "1484570674659070063";
     const selfDeaf = Boolean(remote.self_deaf || false); // default false to prevent AFK auto-kick timers
     const selfMute = remote.self_mute !== undefined ? Boolean(remote.self_mute) : true;
     const voiceKey = `${shouldBeInVoice}_${localGuildId}_${targetChan}_${selfMute}_${selfDeaf}`;
@@ -214,11 +215,27 @@ function connectGateway() {
             console.log(`[VoiceDaemon] ✅ Active in Voice Room: ${localActiveChannelId}`);
             reportTelemetryToCloud(localActiveChannelId, true);
           } else {
-            console.log("[VoiceDaemon] Disconnected from Voice channel");
+            console.log("[VoiceDaemon] ⚠️ Disconnected from voice channel! Auto-rejoining in 3s...");
             localActiveChannelId = null;
             localInVoice = false;
-            lastVoiceKey = `false_${localGuildId}_null`;
+            lastVoiceKey = "";
             reportTelemetryToCloud(null, false);
+
+            setTimeout(() => {
+              if (isConnected && ws && ws.readyState === 1 && !localInVoice) {
+                const lobby = "1484570674659070063";
+                console.log(`[VoiceDaemon] 🔄 Auto-rejoining permanent lobby: ${lobby}`);
+                ws.send(JSON.stringify({
+                  op: 4,
+                  d: {
+                    guild_id: String(localGuildId),
+                    channel_id: String(lobby),
+                    self_mute: true,
+                    self_deaf: false
+                  }
+                }));
+              }
+            }, 3000);
           }
         }
       } else if (data.op === 1) {
@@ -231,6 +248,10 @@ function connectGateway() {
 
   ws.addEventListener("close", (e) => {
     isConnected = false;
+    localInVoice = false;
+    localActiveChannelId = null;
+    lastVoiceKey = "";
+    lastActivityKey = "";
     if (heartbeatTimer) clearInterval(heartbeatTimer);
     if (syncTimer) clearInterval(syncTimer);
     if (e.code === 4004) {
