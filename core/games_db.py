@@ -3,6 +3,19 @@ from typing import List, Dict, Any, Optional
 
 VERIFIED_PRESETS = [
     {
+        "key": "gta6",
+        "name": "Grand Theft Auto VI",
+        "category": "Gaming and Open World",
+        "client_id": "1012356555198005318",
+        "details": "Exploring Vice City",
+        "state": "Free Roam (Jason and Lucia)",
+        "large_image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Grand_Theft_Auto_VI_logo_%28with_gradient%29.svg/960px-Grand_Theft_Auto_VI_logo_%28with_gradient%29.svg.png",
+        "large_text": "Grand Theft Auto VI",
+        "small_image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Rockstar_Games_Logo.svg/512px-Rockstar_Games_Logo.svg.png",
+        "small_text": "Rockstar Games",
+        "icon": "🌴"
+    },
+    {
         "key": "vscode",
         "name": "Visual Studio Code",
         "category": "Development",
