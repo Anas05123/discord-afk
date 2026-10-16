@@ -38,6 +38,7 @@ let localInVoice = false;
 let lastMute = null;
 let lastDeaf = null;
 let lastTargetChan = "";
+let lastActivityKey = "";
 
 // 1. Built-in HTTP server to pass cloud health checks (Render, Koyeb, Railway, etc.)
 const server = http.createServer((req, res) => {
@@ -68,13 +69,26 @@ function buildPresence(act, startMs) {
     };
     if (act.details) entry.details = act.details;
     if (act.state) entry.state = act.state;
-    if (act.client_id || act.application_id) {
-      entry.application_id = String(act.client_id || act.application_id);
+    let appId = act.client_id || act.application_id || "";
+    if (!appId) {
+      const lower = act.name.toLowerCase();
+      if (lower.includes("grand theft auto vi") || lower.includes("gta 6") || lower.includes("gta vi")) {
+        appId = "1445160676522856458";
+      }
+    }
+    if (appId) {
+      entry.application_id = String(appId);
     }
     const assets = {};
-    if (act.large_image) assets.large_image = act.large_image;
+    // Discord Gateway Opcode 3 rejects raw http(s) URLs and displays a question mark box.
+    // Only pass asset keys that are not raw URLs.
+    if (act.large_image && !act.large_image.startsWith("http://") && !act.large_image.startsWith("https://")) {
+      assets.large_image = act.large_image;
+    }
     if (act.large_text) assets.large_text = act.large_text;
-    if (act.small_image) assets.small_image = act.small_image;
+    if (act.small_image && !act.small_image.startsWith("http://") && !act.small_image.startsWith("https://")) {
+      assets.small_image = act.small_image;
+    }
     if (act.small_text) assets.small_text = act.small_text;
     if (Object.keys(assets).length > 0) {
       entry.assets = assets;
@@ -176,24 +190,11 @@ async function syncWithCloudWorker() {
     }
 
     // 3. Sync Activity Presence
-    let act = remote.activity || {};
-    if (!act.name || act.name === "Grand Theft Auto VI") {
-      act = {
-        name: "Grand Theft Auto VI",
-        type: 0,
-        details: act.details || "Exploring Vice City",
-        state: act.state || "Free Roam (Jason & Lucia)",
-        large_image: act.large_image || "https://raw.githubusercontent.com/Anas05123/discord-afk/main/assets/gta6_logo.png",
-        large_text: act.large_text || "Grand Theft Auto VI",
-        small_image: act.small_image || "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Rockstar_Games_Logo.svg/512px-Rockstar_Games_Logo.svg.png",
-        small_text: act.small_text || "Rockstar Games",
-        client_id: act.client_id || ""
-      };
-    }
-    const actKey = `${act.name || ""}_${act.details || ""}_${act.state || ""}_${act.client_id || ""}_${act.large_image || ""}_${act.small_image || ""}_${remote.startTimestampMs || 0}`;
+    const act = remote.activity || {};
+    const actKey = `${act.name || ""}_${act.details || ""}_${act.state || ""}_${act.client_id || act.application_id || ""}_${act.large_image || ""}_${act.small_image || ""}_${remote.startTimestampMs || 0}_${act.status || ""}`;
     if (actKey !== lastActivityKey) {
       console.log(`[VoiceDaemon] ✨ Cloud requested Activity: "${act.name || 'Cleared'}" - "${act.details || ''}"`);
-      const presencePayload = buildPresence(act, remote.startTimestampMs);
+      const presencePayload = buildPresence(act.name ? act : null, remote.startTimestampMs);
       ws.send(JSON.stringify({
         op: 3,
         d: presencePayload
@@ -252,29 +253,12 @@ function connectGateway() {
         isConnected = true;
         console.log(`[VoiceDaemon] 🎉 Logged in as ${data.d?.user?.username} (${myUserId})`);
 
-        // Broadcast GTA 6 Rich Presence immediately upon login
-        const defaultGta6 = {
-          name: "Grand Theft Auto VI",
-          type: 0,
-          details: "Exploring Vice City",
-          state: "Free Roam (Jason & Lucia)",
-          large_image: "https://raw.githubusercontent.com/Anas05123/discord-afk/main/assets/gta6_logo.png",
-          large_text: "Grand Theft Auto VI",
-          small_image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Rockstar_Games_Logo.svg/512px-Rockstar_Games_Logo.svg.png",
-          small_text: "Rockstar Games"
-        };
-        ws.send(JSON.stringify({
-          op: 3,
-          d: buildPresence(defaultGta6, Date.now())
-        }));
-        console.log("[VoiceDaemon] 🎮 Active Rich Presence: Grand Theft Auto VI (Vice City) with Official Logo");
-
         // Start 2.5s Cloud Dashboard Sync Loop
         if (syncTimer) clearInterval(syncTimer);
         syncTimer = setInterval(syncWithCloudWorker, 2500);
 
-        // Immediate first sync
-        setTimeout(syncWithCloudWorker, 500);
+        // Immediate first sync with Cloudflare worker
+        setTimeout(syncWithCloudWorker, 300);
       } else if (data.op === 0 && data.t === "VOICE_STATE_UPDATE") {
         if (String(data.d?.user_id) === myUserId) {
           if (data.d?.channel_id) {

@@ -6,12 +6,12 @@ VERIFIED_PRESETS = [
         "key": "gta6",
         "name": "Grand Theft Auto VI",
         "category": "Gaming and Open World",
-        "client_id": "1012356555198005318",
+        "client_id": "1445160676522856458",
         "details": "Exploring Vice City",
         "state": "Free Roam (Jason and Lucia)",
-        "large_image": "https://raw.githubusercontent.com/Anas05123/discord-afk/main/assets/gta6_logo.png",
+        "large_image": "",
         "large_text": "Grand Theft Auto VI",
-        "small_image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Rockstar_Games_Logo.svg/512px-Rockstar_Games_Logo.svg.png",
+        "small_image": "",
         "small_text": "Rockstar Games",
         "icon": "🌴"
     },
@@ -187,6 +187,14 @@ VERIFIED_PRESETS = [
 ]
 
 CURATED_GAMES: List[Dict[str, Any]] = [
+    {
+        "id": "1445160676522856458",
+        "name": "Grand Theft Auto VI",
+        "exe": "gta6.exe",
+        "category": "Rockstar Games Next-Gen Open World",
+        "icon": "https://cdn.discordapp.com/app-icons/1445160676522856458/251322eb2a778edc62ecce8d791e3701.png",
+        "keywords": ["gta", "gta6", "gta vi", "grand theft auto", "grand theft auto vi", "vice city", "rockstar"]
+    },
     {
         "id": "1470616226995765409",
         "name": "Neverness to Everness",

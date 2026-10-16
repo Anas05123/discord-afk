@@ -7,12 +7,12 @@ const PRESETS = {
   gta6: {
     key: "gta6",
     name: "Grand Theft Auto VI",
-    client_id: "",
+    client_id: "1445160676522856458",
     details: "Exploring Vice City",
     state: "Free Roam (Jason & Lucia)",
-    large_image: "https://raw.githubusercontent.com/Anas05123/discord-afk/main/assets/gta6_logo.png",
+    large_image: "",
     large_text: "Grand Theft Auto VI",
-    small_image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Rockstar_Games_Logo.svg/512px-Rockstar_Games_Logo.svg.png",
+    small_image: "",
     small_text: "Rockstar Games",
     icon: "🌴"
   },
@@ -774,7 +774,7 @@ const BADGES_DATA = [
 ];
 
 const QUEST_GAMES_DATA = [
-  { id: "gta6", name: "Grand Theft Auto VI", exe: "GTA6.exe", client_id: "1012356555198005318", emoji: "🌴", desc: "Vice City / Leonida Open-World" },
+  { id: "gta6", name: "Grand Theft Auto VI", exe: "GTA6.exe", client_id: "1445160676522856458", emoji: "🌴", desc: "Vice City / Leonida Open-World" },
   { id: "nte", name: "Neverness to Everness (NTE)", exe: "htgame.exe", client_id: "1470616226995765409", emoji: "🌌", desc: "Anime Open-World RPG" },
   { id: "giants", name: "March of Giants", exe: "thelineclient-win64-shipping.exe", client_id: "1428223713928810496", emoji: "🗿", desc: "War Strategy MOBA" },
   { id: "hellraiser", name: "Clive Barker's Hellraiser: Revival", exe: "hellraiser-win64-shipping.exe", client_id: "1552168352116641822", emoji: "⛓️", desc: "Horror Survival" },
