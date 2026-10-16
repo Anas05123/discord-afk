@@ -10,7 +10,7 @@ const PRESETS = {
     client_id: "",
     details: "Exploring Vice City",
     state: "Free Roam (Jason & Lucia)",
-    large_image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Grand_Theft_Auto_VI_logo_%28with_gradient%29.svg/960px-Grand_Theft_Auto_VI_logo_%28with_gradient%29.svg.png",
+    large_image: "https://raw.githubusercontent.com/Anas05123/discord-afk/main/assets/gta6_logo.png",
     large_text: "Grand Theft Auto VI",
     small_image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Rockstar_Games_Logo.svg/512px-Rockstar_Games_Logo.svg.png",
     small_text: "Rockstar Games",
