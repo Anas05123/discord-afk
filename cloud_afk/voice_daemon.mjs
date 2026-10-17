@@ -142,9 +142,18 @@ function resolveAppInfo(act) {
   return { id: appId, name: act.name || act.large_text || "Custom Activity" };
 }
 
+function hasValidActivity(act) {
+  if (!act || act.cleared) return false;
+  const name = (act.name || "").trim();
+  const details = (act.details || "").trim();
+  const state = (act.state || "").trim();
+  const largeText = (act.large_text || "").trim();
+  return Boolean(name || details || state || largeText);
+}
+
 function buildPresence(act, startMs) {
   const activities = [];
-  if (act && (act.name || act.large_text || act.details || act.state)) {
+  if (hasValidActivity(act)) {
     const appInfo = resolveAppInfo(act);
     const displayName = act.name || act.large_text || appInfo.name || "Custom Activity";
     const entry = {
@@ -267,11 +276,14 @@ async function syncWithCloudWorker() {
 
     // 3. Sync Activity Presence
     const act = remote.activity || {};
-    const hasActivity = Boolean(act.name || act.large_text || act.details || act.state || act.client_id || act.application_id);
-    const actKey = `${act.name || ""}_${act.details || ""}_${act.state || ""}_${act.client_id || ""}_${act.application_id || ""}_${act.large_image || ""}_${act.small_image || ""}_${remote.startTimestampMs || 0}_${act.status || ""}`;
+    const isValid = hasValidActivity(act);
+    const actKey = isValid
+      ? `${act.name || ""}_${act.details || ""}_${act.state || ""}_${act.client_id || ""}_${act.application_id || ""}_${remote.startTimestampMs || 0}_${act.status || ""}`
+      : "CLEARED_ACTIVITY";
+
     if (actKey !== lastActivityKey) {
-      console.log(`[VoiceDaemon] ✨ Cloud requested Activity: "${act.name || act.large_text || 'Cleared'}" - "${act.details || ''}"`);
-      const presencePayload = buildPresence(hasActivity ? act : null, remote.startTimestampMs);
+      console.log(`[VoiceDaemon] ✨ Cloud requested Activity: ${isValid ? `"${act.name || act.large_text}" - "${act.details || ''}"` : "⚪ REMOVED / CLEARED"}`);
+      const presencePayload = buildPresence(isValid ? act : null, remote.startTimestampMs);
       ws.send(JSON.stringify({
         op: 3,
         d: presencePayload
