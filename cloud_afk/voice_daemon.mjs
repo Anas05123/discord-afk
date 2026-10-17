@@ -147,15 +147,14 @@ function hasValidActivity(act) {
   const name = (act.name || "").trim();
   const details = (act.details || "").trim();
   const state = (act.state || "").trim();
-  const largeText = (act.large_text || "").trim();
-  return Boolean(name || details || state || largeText);
+  return Boolean(name || details || state);
 }
 
 function buildPresence(act, startMs) {
   const activities = [];
   if (hasValidActivity(act)) {
     const appInfo = resolveAppInfo(act);
-    const displayName = act.name || act.large_text || appInfo.name || "Custom Activity";
+    const displayName = act.name || appInfo.name || "Custom Activity";
     const entry = {
       name: displayName,
       type: Number(act.type || 0),
