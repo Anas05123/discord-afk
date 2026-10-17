@@ -59,29 +59,105 @@ server.listen(PORT, () => {
   console.log(`[VoiceDaemon] 🌐 Cloud Health check HTTP server running on port ${PORT}`);
 });
 
+const APP_REGISTRY = {
+  aftereffects: { id: "748568089939148832", name: "Adobe After Effects" },
+  photoshop: { id: "748586506888806460", name: "Adobe Photoshop" },
+  illustrator: { id: "751430009716998144", name: "Adobe Illustrator" },
+  premiere: { id: "748580494324662353", name: "Adobe Premiere Pro" },
+  figma: { id: "866719067092418580", name: "Figma" },
+  vscode: { id: "810516608442695700", name: "Visual Studio Code" },
+  gta6: { id: "1445160676522856458", name: "Grand Theft Auto VI" },
+  valorant: { id: "700136079562375258", name: "VALORANT" },
+  fortnite: { id: "432980957394370572", name: "Fortnite" },
+  roblox: { id: "363445589247131668", name: "Roblox" },
+  genshin: { id: "762434991303950386", name: "Genshin Impact" },
+  nte: { id: "1470616226995765409", name: "Neverness to Everness" },
+  giants: { id: "1428223713928810496", name: "March of Giants" },
+  hellraiser: { id: "1552168352116641822", name: "Clive Barker's Hellraiser: Revival" },
+  helldivers2: { id: "1198592398579482654", name: "HELLDIVERS 2" },
+  cyberpunk: { id: "658056503651106837", name: "Cyberpunk 2077" }
+};
+
+function resolveAppInfo(act) {
+  const rawKey = (act.key || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const rawName = (act.name || act.large_text || "").toLowerCase();
+
+  // 1. Exact preset key match
+  if (rawKey && APP_REGISTRY[rawKey]) {
+    return APP_REGISTRY[rawKey];
+  }
+
+  // 2. Keyword matching on name or title to guarantee correct official app ID
+  if (rawName.includes("after effect") || rawName.includes("afterfx") || rawName.includes("aeft")) {
+    return APP_REGISTRY.aftereffects;
+  }
+  if (rawName.includes("photoshop") || rawName.includes("phxs")) {
+    return APP_REGISTRY.photoshop;
+  }
+  if (rawName.includes("premiere") || rawName.includes("ppro")) {
+    return APP_REGISTRY.premiere;
+  }
+  if (rawName.includes("illustrator") || rawName.includes("ilst")) {
+    return APP_REGISTRY.illustrator;
+  }
+  if (rawName.includes("figma")) {
+    return APP_REGISTRY.figma;
+  }
+  if (rawName.includes("grand theft auto") || rawName.includes("gta 6") || rawName.includes("gta vi")) {
+    return APP_REGISTRY.gta6;
+  }
+  if (rawName.includes("visual studio code") || rawName.includes("vscode")) {
+    return APP_REGISTRY.vscode;
+  }
+  if (rawName.includes("valorant")) {
+    return APP_REGISTRY.valorant;
+  }
+  if (rawName.includes("fortnite")) {
+    return APP_REGISTRY.fortnite;
+  }
+  if (rawName.includes("roblox")) {
+    return APP_REGISTRY.roblox;
+  }
+  if (rawName.includes("genshin")) {
+    return APP_REGISTRY.genshin;
+  }
+  if (rawName.includes("neverness") || rawName.includes("nte")) {
+    return APP_REGISTRY.nte;
+  }
+  if (rawName.includes("giants") || rawName.includes("march of")) {
+    return APP_REGISTRY.giants;
+  }
+  if (rawName.includes("hellraiser")) {
+    return APP_REGISTRY.hellraiser;
+  }
+  if (rawName.includes("helldivers")) {
+    return APP_REGISTRY.helldivers2;
+  }
+  if (rawName.includes("cyberpunk")) {
+    return APP_REGISTRY.cyberpunk;
+  }
+
+  // 3. Fallback to application_id or client_id (application_id takes priority)
+  const appId = String(act.application_id || act.client_id || "");
+  return { id: appId, name: act.name || act.large_text || "Custom Activity" };
+}
+
 function buildPresence(act, startMs) {
   const activities = [];
-  if (act && act.name) {
+  if (act && (act.name || act.large_text || act.details || act.state)) {
+    const appInfo = resolveAppInfo(act);
+    const displayName = act.name || act.large_text || appInfo.name || "Custom Activity";
     const entry = {
-      name: act.name,
+      name: displayName,
       type: Number(act.type || 0),
       timestamps: { start: startMs || Date.now() }
     };
     if (act.details) entry.details = act.details;
     if (act.state) entry.state = act.state;
-    let appId = act.client_id || act.application_id || "";
-    if (!appId) {
-      const lower = act.name.toLowerCase();
-      if (lower.includes("grand theft auto vi") || lower.includes("gta 6") || lower.includes("gta vi")) {
-        appId = "1445160676522856458";
-      }
-    }
-    if (appId) {
-      entry.application_id = String(appId);
+    if (appInfo.id) {
+      entry.application_id = String(appInfo.id);
     }
     const assets = {};
-    // Discord Gateway Opcode 3 rejects raw http(s) URLs and displays a question mark box.
-    // Only pass asset keys that are not raw URLs.
     if (act.large_image && !act.large_image.startsWith("http://") && !act.large_image.startsWith("https://")) {
       assets.large_image = act.large_image;
     }
@@ -191,10 +267,11 @@ async function syncWithCloudWorker() {
 
     // 3. Sync Activity Presence
     const act = remote.activity || {};
-    const actKey = `${act.name || ""}_${act.details || ""}_${act.state || ""}_${act.client_id || act.application_id || ""}_${act.large_image || ""}_${act.small_image || ""}_${remote.startTimestampMs || 0}_${act.status || ""}`;
+    const hasActivity = Boolean(act.name || act.large_text || act.details || act.state || act.client_id || act.application_id);
+    const actKey = `${act.name || ""}_${act.details || ""}_${act.state || ""}_${act.client_id || ""}_${act.application_id || ""}_${act.large_image || ""}_${act.small_image || ""}_${remote.startTimestampMs || 0}_${act.status || ""}`;
     if (actKey !== lastActivityKey) {
-      console.log(`[VoiceDaemon] ✨ Cloud requested Activity: "${act.name || 'Cleared'}" - "${act.details || ''}"`);
-      const presencePayload = buildPresence(act.name ? act : null, remote.startTimestampMs);
+      console.log(`[VoiceDaemon] ✨ Cloud requested Activity: "${act.name || act.large_text || 'Cleared'}" - "${act.details || ''}"`);
+      const presencePayload = buildPresence(hasActivity ? act : null, remote.startTimestampMs);
       ws.send(JSON.stringify({
         op: 3,
         d: presencePayload

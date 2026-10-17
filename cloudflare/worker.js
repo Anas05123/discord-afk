@@ -67,7 +67,7 @@ const PRESETS = {
   figma: {
     key: "figma",
     name: "Figma",
-    client_id: "751430009716998144",
+    client_id: "866719067092418580",
     details: "Designing UI_Design_System.fig",
     state: "Auto-Layout & Interactive Prototype",
     large_image: "https://cdn-icons-png.flaticon.com/512/5968/5968705.png",
@@ -923,16 +923,20 @@ function applyCustomTimer() {
   applyActivity();
 }
 
-async function applyActivity(resetTimer = false) {
+async function applyActivity(resetTimer = false, presetKey = '') {
   const hrs = parseFloat(document.getElementById('entryTimerHours').value || '0');
   const mins = parseFloat(document.getElementById('entryTimerMins').value || '0');
+  const cid = document.getElementById('entryClientId').value.trim();
+  const actName = document.getElementById('entryLargeText').value.trim() || 'Custom Activity';
   const payload = {
-    application_id: document.getElementById('entryClientId').value.trim(),
-    name: document.getElementById('entryLargeText').value.trim() || 'Adobe Illustrator',
+    key: presetKey,
+    application_id: cid,
+    client_id: cid,
+    name: actName,
     details: document.getElementById('entryDetails').value.trim(),
     state: document.getElementById('entryState').value.trim(),
     large_image: document.getElementById('entryLargeImg').value.trim(),
-    large_text: document.getElementById('entryLargeText').value.trim(),
+    large_text: actName,
     small_image: document.getElementById('entrySmallImg').value.trim(),
     small_text: document.getElementById('entrySmallText').value.trim(),
     elapsed_hours: hrs,
@@ -1500,8 +1504,15 @@ export class DiscordAFKSession {
       if (body.preset && PRESETS[body.preset]) {
         this.activity = { ...PRESETS[body.preset] };
       }
-      for (const k of ["name", "details", "state", "status", "application_id", "client_id", "large_image", "large_text", "small_image", "small_text"]) {
+      for (const k of ["name", "details", "state", "status", "application_id", "client_id", "large_image", "large_text", "small_image", "small_text", "key"]) {
         if (body[k] !== undefined) this.activity[k] = body[k];
+      }
+      if (body.application_id) {
+        this.activity.application_id = String(body.application_id);
+        this.activity.client_id = String(body.application_id);
+      } else if (body.client_id) {
+        this.activity.application_id = String(body.client_id);
+        this.activity.client_id = String(body.client_id);
       }
       if (body.reset_timer) {
         this.startTimestampMs = Date.now();

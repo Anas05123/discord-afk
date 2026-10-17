@@ -84,7 +84,7 @@ VERIFIED_PRESETS = [
         "key": "figma",
         "name": "Figma",
         "category": "Creative & Design",
-        "client_id": "751430009716998144",
+        "client_id": "866719067092418580",
         "details": "Designing UI_Design_System.fig",
         "state": "Auto-Layout & Interactive Prototype",
         "large_image": "https://cdn-icons-png.flaticon.com/512/5968/5968705.png",
@@ -260,7 +260,7 @@ CURATED_GAMES: List[Dict[str, Any]] = [
         "keywords": ["premiere", "premiere pro", "adobe premiere", "video editing"]
     },
     {
-        "id": "751430009716998144",
+        "id": "866719067092418580",
         "name": "Figma",
         "exe": "Figma.exe",
         "category": "Creative & Design",
