@@ -79,67 +79,75 @@ const APP_REGISTRY = {
 };
 
 function resolveAppInfo(act) {
-  const rawKey = (act.key || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const rawName = (act.name || act.large_text || "").toLowerCase();
+  const givenAppId = String(act.application_id || act.client_id || "").trim();
+  const rawName = String(act.name || "").toLowerCase().trim();
+  const rawLargeText = String(act.large_text || "").toLowerCase().trim();
+  const combined = `${rawName} ${rawLargeText}`;
 
-  // 1. Exact preset key match
-  if (rawKey && APP_REGISTRY[rawKey]) {
-    return APP_REGISTRY[rawKey];
+  // 1. Direct match by official application ID if present
+  if (givenAppId) {
+    for (const app of Object.values(APP_REGISTRY)) {
+      if (app.id === givenAppId) {
+        return app;
+      }
+    }
   }
 
-  // 2. Keyword matching on name or title to guarantee correct official app ID
-  if (rawName.includes("after effect") || rawName.includes("afterfx") || rawName.includes("aeft")) {
-    return APP_REGISTRY.aftereffects;
-  }
-  if (rawName.includes("photoshop") || rawName.includes("phxs")) {
-    return APP_REGISTRY.photoshop;
-  }
-  if (rawName.includes("premiere") || rawName.includes("ppro")) {
-    return APP_REGISTRY.premiere;
-  }
-  if (rawName.includes("illustrator") || rawName.includes("ilst")) {
-    return APP_REGISTRY.illustrator;
-  }
-  if (rawName.includes("figma")) {
-    return APP_REGISTRY.figma;
-  }
-  if (rawName.includes("grand theft auto") || rawName.includes("gta 6") || rawName.includes("gta vi")) {
+  // 2. Keyword matching on name or large_text
+  if (combined.includes("grand theft auto") || combined.includes("gta 6") || combined.includes("gta vi")) {
     return APP_REGISTRY.gta6;
   }
-  if (rawName.includes("visual studio code") || rawName.includes("vscode")) {
+  if (combined.includes("visual studio code") || combined.includes("vscode")) {
     return APP_REGISTRY.vscode;
   }
-  if (rawName.includes("valorant")) {
+  if (combined.includes("photoshop") || combined.includes("phxs")) {
+    return APP_REGISTRY.photoshop;
+  }
+  if (combined.includes("after effect") || combined.includes("afterfx") || combined.includes("aeft")) {
+    return APP_REGISTRY.aftereffects;
+  }
+  if (combined.includes("premiere") || combined.includes("ppro")) {
+    return APP_REGISTRY.premiere;
+  }
+  if (combined.includes("figma")) {
+    return APP_REGISTRY.figma;
+  }
+  if (combined.includes("valorant")) {
     return APP_REGISTRY.valorant;
   }
-  if (rawName.includes("fortnite")) {
+  if (combined.includes("fortnite")) {
     return APP_REGISTRY.fortnite;
   }
-  if (rawName.includes("roblox")) {
+  if (combined.includes("roblox")) {
     return APP_REGISTRY.roblox;
   }
-  if (rawName.includes("genshin")) {
+  if (combined.includes("genshin")) {
     return APP_REGISTRY.genshin;
   }
-  if (rawName.includes("neverness") || rawName.includes("nte")) {
+  if (combined.includes("neverness") || combined.includes("nte")) {
     return APP_REGISTRY.nte;
   }
-  if (rawName.includes("giants") || rawName.includes("march of")) {
+  if (combined.includes("giants") || combined.includes("march of")) {
     return APP_REGISTRY.giants;
   }
-  if (rawName.includes("hellraiser")) {
+  if (combined.includes("hellraiser")) {
     return APP_REGISTRY.hellraiser;
   }
-  if (rawName.includes("helldivers")) {
+  if (combined.includes("helldivers")) {
     return APP_REGISTRY.helldivers2;
   }
-  if (rawName.includes("cyberpunk")) {
+  if (combined.includes("cyberpunk")) {
     return APP_REGISTRY.cyberpunk;
   }
+  if (combined.includes("illustrator") || combined.includes("ilst")) {
+    return APP_REGISTRY.illustrator;
+  }
 
-  // 3. Fallback to application_id or client_id (application_id takes priority)
-  const appId = String(act.application_id || act.client_id || "");
-  return { id: appId, name: act.name || act.large_text || "Custom Activity" };
+  // 3. Fallback to custom
+  return {
+    id: givenAppId,
+    name: act.name || act.large_text || "Custom Activity"
+  };
 }
 
 function hasValidActivity(act) {
@@ -201,7 +209,7 @@ async function syncWithCloudWorker() {
       localGuildId = remote.guild_id;
     }
 
-    // 2. Sync Voice Room State
+        // 2. Sync Voice Room State
     const shouldBeInVoice = remote.in_voice !== false;
     const targetChan = remote.requested_channel_id || "1484570674659070063";
     const selfDeaf = Boolean(remote.self_deaf || false);
@@ -209,7 +217,7 @@ async function syncWithCloudWorker() {
 
     if (shouldBeInVoice) {
       if (!localInVoice) {
-        // Not currently in any voice channel: Join the target lobby
+        // Genuinely NOT in any voice room anywhere: Connect to target lobby
         console.log(`[VoiceDaemon] 🔊 Connecting to Voice Room: ${targetChan} (guild: ${localGuildId})`);
         ws.send(JSON.stringify({
           op: 4,
@@ -225,23 +233,10 @@ async function syncWithCloudWorker() {
         lastMute = selfMute;
         lastDeaf = selfDeaf;
       } else {
-        // Already in voice! Stay put. Never re-trigger Join-to-Create lobby.
-        // Only update mute/deaf state if changed, or if user explicitly requested a DIFFERENT channel
-        if (remote.requested_channel_id && remote.requested_channel_id !== lastTargetChan && remote.requested_channel_id !== localActiveChannelId) {
-          console.log(`[VoiceDaemon] 🔀 Switching to requested Channel: ${remote.requested_channel_id}`);
-          ws.send(JSON.stringify({
-            op: 4,
-            d: {
-              guild_id: String(localGuildId),
-              channel_id: String(remote.requested_channel_id),
-              self_mute: selfMute,
-              self_deaf: selfDeaf
-            }
-          }));
-          localChannelId = remote.requested_channel_id;
-          lastTargetChan = remote.requested_channel_id;
-        } else if (selfMute !== lastMute || selfDeaf !== lastDeaf) {
-          console.log(`[VoiceDaemon] 🎙️ Updating Mute (${selfMute}) / Deaf (${selfDeaf})`);
+        // Already active in voice! NEVER join the Join-to-Create lobby channel while already in voice!
+        // Only update mute/deaf state in current room if changed
+        if (selfMute !== lastMute || selfDeaf !== lastDeaf) {
+          console.log(`[VoiceDaemon] 🎙️ Updating Mute (${selfMute}) / Deaf (${selfDeaf}) in current room`);
           ws.send(JSON.stringify({
             op: 4,
             d: {
@@ -336,10 +331,28 @@ function connectGateway() {
             properties: { os: "Windows", browser: "Chrome", device: "" }
           }
         }));
-      } else if (data.op === 0 && data.t === "READY") {
+            } else if (data.op === 0 && data.t === "READY") {
         myUserId = String(data.d?.user?.id || "");
         isConnected = true;
         console.log(`[VoiceDaemon] 🎉 Logged in as ${data.d?.user?.username} (${myUserId})`);
+
+        // Check if user account is ALREADY connected to voice in ANY guild
+        if (Array.isArray(data.d?.guilds)) {
+          for (const g of data.d.guilds) {
+            if (Array.isArray(g.voice_states)) {
+              const myState = g.voice_states.find(vs => String(vs.user_id) === String(myUserId));
+              if (myState && myState.channel_id) {
+                localActiveChannelId = String(myState.channel_id);
+                localInVoice = true;
+                localGuildId = String(g.id);
+                lastTargetChan = localActiveChannelId;
+                console.log(`[VoiceDaemon] 🛡️ User is ALREADY in Voice Room ${localActiveChannelId} in guild ${localGuildId}. Preserving existing room without disruption!`);
+                reportTelemetryToCloud(localActiveChannelId, true);
+                break;
+              }
+            }
+          }
+        }
 
         // Start 2.5s Cloud Dashboard Sync Loop
         if (syncTimer) clearInterval(syncTimer);
