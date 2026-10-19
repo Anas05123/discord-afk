@@ -26,6 +26,9 @@ const PORT = process.env.PORT || 10000;
 
 let ws = null;
 let myUserId = null;
+let mySessionId = null;
+let isUserActiveOnOtherClient = false;
+let resumeAfkTimer = null;
 let sequence = null;
 let heartbeatTimer = null;
 let syncTimer = null;
@@ -219,7 +222,9 @@ async function syncWithCloudWorker() {
     desiredDeaf = remote.self_deaf !== undefined ? Boolean(remote.self_deaf) : true;
     desiredMute = remote.self_mute !== undefined ? Boolean(remote.self_mute) : true;
 
-    if (shouldBeInVoice) {
+    if (isUserActiveOnOtherClient) {
+      // User is actively in voice on PC / mobile! DO NOT touch voice or send Opcode 4!
+    } else if (shouldBeInVoice) {
       if (!localInVoice) {
         // Genuinely NOT in any voice room anywhere: Connect to target lobby
         console.log(`[VoiceDaemon] 🔊 Connecting to Voice Room: ${targetChan} (guild: ${localGuildId}) [mute=${desiredMute}, deaf=${desiredDeaf}]`);
@@ -345,8 +350,9 @@ function connectGateway() {
         }));
             } else if (data.op === 0 && data.t === "READY") {
         myUserId = String(data.d?.user?.id || "");
+        mySessionId = String(data.d?.session_id || "");
         isConnected = true;
-        console.log(`[VoiceDaemon] 🎉 Logged in as ${data.d?.user?.username} (${myUserId})`);
+        console.log(`[VoiceDaemon] 🎉 Logged in as ${data.d?.user?.username} (${myUserId}) [session: ${mySessionId}]`);
 
         // Check if user account is ALREADY connected to voice in ANY guild
         if (Array.isArray(data.d?.guilds)) {
@@ -360,7 +366,14 @@ function connectGateway() {
                 lastTargetChan = localActiveChannelId;
                 currentVoiceMute = Boolean(myState.self_mute);
                 currentVoiceDeaf = Boolean(myState.self_deaf);
-                console.log(`[VoiceDaemon] 🛡️ User is ALREADY in Voice Room ${localActiveChannelId} in guild ${localGuildId}. Current states: mute=${currentVoiceMute}, deaf=${currentVoiceDeaf}`);
+                const stateSession = String(myState.session_id || "");
+                if (mySessionId && stateSession && stateSession !== mySessionId) {
+                  isUserActiveOnOtherClient = true;
+                  console.log(`[VoiceDaemon] 👤 User is ALREADY active in voice on PC/Mobile (session: ${stateSession}). Yielding voice control.`);
+                } else {
+                  isUserActiveOnOtherClient = false;
+                  console.log(`[VoiceDaemon] 🛡️ User is ALREADY in Voice Room ${localActiveChannelId} in guild ${localGuildId}. Current states: mute=${currentVoiceMute}, deaf=${currentVoiceDeaf}`);
+                }
                 reportTelemetryToCloud(localActiveChannelId, true);
                 break;
               }
@@ -376,16 +389,34 @@ function connectGateway() {
         setTimeout(syncWithCloudWorker, 300);
       } else if (data.op === 0 && data.t === "VOICE_STATE_UPDATE") {
         if (String(data.d?.user_id) === myUserId) {
+          const eventSessionId = String(data.d?.session_id || "");
+          const isOtherClient = Boolean(mySessionId && eventSessionId && eventSessionId !== mySessionId);
+
           if (data.d?.channel_id) {
             localActiveChannelId = String(data.d.channel_id);
             localInVoice = true;
             localChannelId = localActiveChannelId;
             currentVoiceMute = Boolean(data.d.self_mute);
             currentVoiceDeaf = Boolean(data.d.self_deaf);
+
+            if (isOtherClient) {
+              // The user actively joined voice from PC / Mobile! DO NOT SEND OPCODE 4! DO NOT DISCONNECT THEM!
+              isUserActiveOnOtherClient = true;
+              if (resumeAfkTimer) {
+                clearTimeout(resumeAfkTimer);
+                resumeAfkTimer = null;
+              }
+              console.log(`[VoiceDaemon] 👤 User actively entered voice on PC/Mobile (session: ${eventSessionId}, channel: ${localActiveChannelId}). Yielding voice control so user is NOT disconnected!`);
+              reportTelemetryToCloud(localActiveChannelId, true);
+              return;
+            }
+
+            // It is our own daemon session:
+            isUserActiveOnOtherClient = false;
             console.log(`[VoiceDaemon] ✅ Active in Voice Room: ${localActiveChannelId} (reported: mute=${currentVoiceMute}, deaf=${currentVoiceDeaf})`);
             reportTelemetryToCloud(localActiveChannelId, true);
 
-            // If Discord reported that we are NOT deafened (or not muted) but desired is true, enforce immediately!
+            // If Discord reported that we are NOT deafened (or not muted) but desired is true, enforce immediately on our session!
             if ((desiredDeaf && !currentVoiceDeaf) || (desiredMute && !currentVoiceMute)) {
               console.log(`[VoiceDaemon] ⚡ Immediately applying requested mute=${desiredMute}, deaf=${desiredDeaf} in room ${localActiveChannelId}`);
               ws.send(JSON.stringify({
@@ -401,7 +432,7 @@ function connectGateway() {
               lastDeaf = desiredDeaf;
             }
           } else {
-            console.log("[VoiceDaemon] ⚠️ Disconnected from voice channel");
+            console.log(`[VoiceDaemon] ⚠️ Disconnected from voice channel (session: ${eventSessionId}, wasOnOtherDevice: ${isUserActiveOnOtherClient})`);
             localActiveChannelId = null;
             localInVoice = false;
             currentVoiceMute = null;
@@ -409,6 +440,17 @@ function connectGateway() {
             lastMute = null;
             lastDeaf = null;
             reportTelemetryToCloud(null, false);
+
+            if (isUserActiveOnOtherClient) {
+              console.log(`[VoiceDaemon] ⏳ User left voice on PC/phone. Auto-resuming 24/7 AFK mode in 8 seconds...`);
+              if (resumeAfkTimer) clearTimeout(resumeAfkTimer);
+              resumeAfkTimer = setTimeout(() => {
+                isUserActiveOnOtherClient = false;
+                resumeAfkTimer = null;
+                console.log(`[VoiceDaemon] 🔄 Resuming 24/7 AFK mode now that PC session is inactive...`);
+                syncWithCloudWorker();
+              }, 8000);
+            }
           }
         }
       } else if (data.op === 1) {
@@ -425,6 +467,11 @@ function connectGateway() {
     localActiveChannelId = null;
     currentVoiceMute = null;
     currentVoiceDeaf = null;
+    isUserActiveOnOtherClient = false;
+    if (resumeAfkTimer) {
+      clearTimeout(resumeAfkTimer);
+      resumeAfkTimer = null;
+    }
     lastTargetChan = "";
     lastMute = null;
     lastDeaf = null;
