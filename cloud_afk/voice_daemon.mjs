@@ -35,6 +35,10 @@ let localGuildId = process.env.GUILD_ID || cfg.saved_guild_id || "14425119218981
 let localChannelId = process.env.CHANNEL_ID || cfg.saved_channel_id || "1484570674659070063";
 let localActiveChannelId = null;
 let localInVoice = false;
+let currentVoiceMute = null;
+let currentVoiceDeaf = null;
+let desiredMute = true;
+let desiredDeaf = true;
 let lastMute = null;
 let lastDeaf = null;
 let lastTargetChan = "";
@@ -84,16 +88,7 @@ function resolveAppInfo(act) {
   const rawLargeText = String(act.large_text || "").toLowerCase().trim();
   const combined = `${rawName} ${rawLargeText}`;
 
-  // 1. Direct match by official application ID if present
-  if (givenAppId) {
-    for (const app of Object.values(APP_REGISTRY)) {
-      if (app.id === givenAppId) {
-        return app;
-      }
-    }
-  }
-
-  // 2. Keyword matching on name or large_text
+  // 1. Keyword matching on name or large_text first (prioritizes user-selected title over stale ID)
   if (combined.includes("grand theft auto") || combined.includes("gta 6") || combined.includes("gta vi")) {
     return APP_REGISTRY.gta6;
   }
@@ -141,6 +136,15 @@ function resolveAppInfo(act) {
   }
   if (combined.includes("illustrator") || combined.includes("ilst")) {
     return APP_REGISTRY.illustrator;
+  }
+
+  // 2. Direct match by official application ID if present
+  if (givenAppId) {
+    for (const app of Object.values(APP_REGISTRY)) {
+      if (app.id === givenAppId) {
+        return app;
+      }
+    }
   }
 
   // 3. Fallback to custom
@@ -212,42 +216,48 @@ async function syncWithCloudWorker() {
         // 2. Sync Voice Room State
     const shouldBeInVoice = remote.in_voice !== false;
     const targetChan = remote.requested_channel_id || "1484570674659070063";
-    const selfDeaf = Boolean(remote.self_deaf || false);
-    const selfMute = remote.self_mute !== undefined ? Boolean(remote.self_mute) : true;
+    desiredDeaf = remote.self_deaf !== undefined ? Boolean(remote.self_deaf) : true;
+    desiredMute = remote.self_mute !== undefined ? Boolean(remote.self_mute) : true;
 
     if (shouldBeInVoice) {
       if (!localInVoice) {
         // Genuinely NOT in any voice room anywhere: Connect to target lobby
-        console.log(`[VoiceDaemon] 🔊 Connecting to Voice Room: ${targetChan} (guild: ${localGuildId})`);
+        console.log(`[VoiceDaemon] 🔊 Connecting to Voice Room: ${targetChan} (guild: ${localGuildId}) [mute=${desiredMute}, deaf=${desiredDeaf}]`);
         ws.send(JSON.stringify({
           op: 4,
           d: {
             guild_id: String(localGuildId),
             channel_id: String(targetChan),
-            self_mute: selfMute,
-            self_deaf: selfDeaf
+            self_mute: desiredMute,
+            self_deaf: desiredDeaf
           }
         }));
         localChannelId = targetChan;
         lastTargetChan = targetChan;
-        lastMute = selfMute;
-        lastDeaf = selfDeaf;
+        lastMute = desiredMute;
+        lastDeaf = desiredDeaf;
       } else {
         // Already active in voice! NEVER join the Join-to-Create lobby channel while already in voice!
-        // Only update mute/deaf state in current room if changed
-        if (selfMute !== lastMute || selfDeaf !== lastDeaf) {
-          console.log(`[VoiceDaemon] 🎙️ Updating Mute (${selfMute}) / Deaf (${selfDeaf}) in current room`);
+        const activeChan = localActiveChannelId || localChannelId;
+        const needsUpdate = (
+          desiredMute !== lastMute ||
+          desiredDeaf !== lastDeaf ||
+          (currentVoiceDeaf !== null && currentVoiceDeaf !== desiredDeaf) ||
+          (currentVoiceMute !== null && currentVoiceMute !== desiredMute)
+        );
+        if (needsUpdate) {
+          console.log(`[VoiceDaemon] 🎙️ Enforcing Voice State in ${activeChan}: Mute=${desiredMute}, Deaf=${desiredDeaf} (Discord reported: mute=${currentVoiceMute}, deaf=${currentVoiceDeaf})`);
           ws.send(JSON.stringify({
             op: 4,
             d: {
               guild_id: String(localGuildId),
-              channel_id: String(localActiveChannelId || localChannelId),
-              self_mute: selfMute,
-              self_deaf: selfDeaf
+              channel_id: String(activeChan),
+              self_mute: desiredMute,
+              self_deaf: desiredDeaf
             }
           }));
-          lastMute = selfMute;
-          lastDeaf = selfDeaf;
+          lastMute = desiredMute;
+          lastDeaf = desiredDeaf;
         }
       }
     } else {
@@ -265,6 +275,8 @@ async function syncWithCloudWorker() {
         localInVoice = false;
         localActiveChannelId = null;
         lastTargetChan = "";
+        lastMute = null;
+        lastDeaf = null;
       }
     }
 
@@ -346,7 +358,9 @@ function connectGateway() {
                 localInVoice = true;
                 localGuildId = String(g.id);
                 lastTargetChan = localActiveChannelId;
-                console.log(`[VoiceDaemon] 🛡️ User is ALREADY in Voice Room ${localActiveChannelId} in guild ${localGuildId}. Preserving existing room without disruption!`);
+                currentVoiceMute = Boolean(myState.self_mute);
+                currentVoiceDeaf = Boolean(myState.self_deaf);
+                console.log(`[VoiceDaemon] 🛡️ User is ALREADY in Voice Room ${localActiveChannelId} in guild ${localGuildId}. Current states: mute=${currentVoiceMute}, deaf=${currentVoiceDeaf}`);
                 reportTelemetryToCloud(localActiveChannelId, true);
                 break;
               }
@@ -366,12 +380,34 @@ function connectGateway() {
             localActiveChannelId = String(data.d.channel_id);
             localInVoice = true;
             localChannelId = localActiveChannelId;
-            console.log(`[VoiceDaemon] ✅ Active in Voice Room: ${localActiveChannelId}`);
+            currentVoiceMute = Boolean(data.d.self_mute);
+            currentVoiceDeaf = Boolean(data.d.self_deaf);
+            console.log(`[VoiceDaemon] ✅ Active in Voice Room: ${localActiveChannelId} (reported: mute=${currentVoiceMute}, deaf=${currentVoiceDeaf})`);
             reportTelemetryToCloud(localActiveChannelId, true);
+
+            // If Discord reported that we are NOT deafened (or not muted) but desired is true, enforce immediately!
+            if ((desiredDeaf && !currentVoiceDeaf) || (desiredMute && !currentVoiceMute)) {
+              console.log(`[VoiceDaemon] ⚡ Immediately applying requested mute=${desiredMute}, deaf=${desiredDeaf} in room ${localActiveChannelId}`);
+              ws.send(JSON.stringify({
+                op: 4,
+                d: {
+                  guild_id: String(localGuildId),
+                  channel_id: String(localActiveChannelId),
+                  self_mute: desiredMute,
+                  self_deaf: desiredDeaf
+                }
+              }));
+              lastMute = desiredMute;
+              lastDeaf = desiredDeaf;
+            }
           } else {
             console.log("[VoiceDaemon] ⚠️ Disconnected from voice channel");
             localActiveChannelId = null;
             localInVoice = false;
+            currentVoiceMute = null;
+            currentVoiceDeaf = null;
+            lastMute = null;
+            lastDeaf = null;
             reportTelemetryToCloud(null, false);
           }
         }
@@ -387,6 +423,8 @@ function connectGateway() {
     isConnected = false;
     localInVoice = false;
     localActiveChannelId = null;
+    currentVoiceMute = null;
+    currentVoiceDeaf = null;
     lastTargetChan = "";
     lastMute = null;
     lastDeaf = null;

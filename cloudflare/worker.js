@@ -774,7 +774,7 @@ const BADGES_DATA = [
 ];
 
 const QUEST_GAMES_DATA = [
-  { id: "gta6", name: "Grand Theft Auto VI", exe: "GTA6.exe", client_id: "1445160676522856458", emoji: "🌴", desc: "Vice City / Leonida Open-World" },
+  { id: "gta6", name: "Grand Theft Auto VI", exe: "gta6.exe", client_id: "1445160676522856458", emoji: "🌴", desc: "Rockstar Games Next-Gen Open World" },
   { id: "nte", name: "Neverness to Everness (NTE)", exe: "htgame.exe", client_id: "1470616226995765409", emoji: "🌌", desc: "Anime Open-World RPG" },
   { id: "giants", name: "March of Giants", exe: "thelineclient-win64-shipping.exe", client_id: "1428223713928810496", emoji: "🗿", desc: "War Strategy MOBA" },
   { id: "hellraiser", name: "Clive Barker's Hellraiser: Revival", exe: "hellraiser-win64-shipping.exe", client_id: "1552168352116641822", emoji: "⛓️", desc: "Horror Survival" },
@@ -802,8 +802,7 @@ function switchPage(pageKey) {
 
 function initGrids() {
   const presetList = [
-    ["🌴 GTA 6", "gta6"],
-    ["🎨 Photoshop", "photoshop"], ["✒️ Illustrator", "illustrator"], ["✨ After Effects", "aftereffects"], ["🎬 Premiere Pro", "premiere"],
+    ["🌴 GTA VI", "gta6"], ["🎨 Photoshop", "photoshop"], ["✒️ Illustrator", "illustrator"], ["✨ After Effects", "aftereffects"], ["🎬 Premiere Pro", "premiere"],
     ["📐 Figma", "figma"], ["💻 VS Code", "vscode"], ["🎯 VALORANT", "valorant"], ["🪂 Fortnite", "fortnite"],
     ["🧱 ROBLOX", "roblox"], ["⚔️ Genshin", "genshin"], ["☕ Lo-Fi Chill", "chill"], ["📚 Deep Study", "studying"]
   ];
@@ -1270,6 +1269,14 @@ async function refreshTelemetry() {
     if (d.startTimestampMs) {
       startTimestampMs = d.startTimestampMs;
     }
+    if (d.self_mute !== undefined) {
+      const cbMute = document.getElementById('cbMute');
+      if (cbMute && document.activeElement !== cbMute) cbMute.checked = Boolean(d.self_mute);
+    }
+    if (d.self_deaf !== undefined) {
+      const cbDeaf = document.getElementById('cbDeaf');
+      if (cbDeaf && document.activeElement !== cbDeaf) cbDeaf.checked = Boolean(d.self_deaf);
+    }
   } catch (e) {}
 }
 
@@ -1329,6 +1336,10 @@ export class DiscordAFKSession {
     const savedInVoice = await this.ctx.storage.get("inVoice");
     if (savedInVoice !== undefined) this.inVoice = Boolean(savedInVoice);
     if (savedChanName) this.channelName = savedChanName;
+    const savedSelfMute = await this.ctx.storage.get("selfMute");
+    if (savedSelfMute !== undefined) this.selfMute = Boolean(savedSelfMute);
+    const savedSelfDeaf = await this.ctx.storage.get("selfDeaf");
+    if (savedSelfDeaf !== undefined) this.selfDeaf = Boolean(savedSelfDeaf);
   }
 
   async resolveValidChannel(token) {
@@ -1423,7 +1434,6 @@ export class DiscordAFKSession {
         return new Response(JSON.stringify({ ok: false, guilds: [] }), { headers: { "Content-Type": "application/json" } });
       }
     }
-
     if (request.method === "GET" && url.pathname.startsWith("/api/channels")) {
       const gid = url.searchParams.get("guild_id") || this.guildId;
       try {
@@ -1462,8 +1472,14 @@ export class DiscordAFKSession {
         await this.ctx.storage.put("channelId", this.channelId);
         await this.ctx.storage.delete("activeChannelId");
       }
-      if (body.self_mute !== undefined) this.selfMute = Boolean(body.self_mute);
-      if (body.self_deaf !== undefined) this.selfDeaf = Boolean(body.self_deaf);
+      if (body.self_mute !== undefined) {
+        this.selfMute = Boolean(body.self_mute);
+        await this.ctx.storage.put("selfMute", this.selfMute);
+      }
+      if (body.self_deaf !== undefined) {
+        this.selfDeaf = Boolean(body.self_deaf);
+        await this.ctx.storage.put("selfDeaf", this.selfDeaf);
+      }
       if (body.name) {
         this.activity.name = body.name;
         await this.ctx.storage.put("activity", this.activity);
@@ -1476,6 +1492,8 @@ export class DiscordAFKSession {
         channel_id: this.activeChannelId || this.channelId,
         requested_channel_id: this.channelId,
         channel_name: this.channelName,
+        self_mute: this.selfMute,
+        self_deaf: this.selfDeaf,
         in_voice: this.inVoice
       }), {
         headers: { "Content-Type": "application/json" }
@@ -1507,12 +1525,13 @@ export class DiscordAFKSession {
       for (const k of ["name", "details", "state", "status", "application_id", "client_id", "large_image", "large_text", "small_image", "small_text", "key"]) {
         if (body[k] !== undefined) this.activity[k] = body[k];
       }
-      if (body.application_id) {
-        this.activity.application_id = String(body.application_id);
-        this.activity.client_id = String(body.application_id);
-      } else if (body.client_id) {
-        this.activity.application_id = String(body.client_id);
-        this.activity.client_id = String(body.client_id);
+      const targetAppId = body.application_id || body.client_id;
+      if (targetAppId) {
+        this.activity.application_id = String(targetAppId);
+        this.activity.client_id = String(targetAppId);
+      }
+      if (body.clear || (!body.name && !body.details && !body.state)) {
+        this.activity = { cleared: true, name: "", details: "", state: "", application_id: "", client_id: "" };
       }
       if (body.reset_timer) {
         this.startTimestampMs = Date.now();
@@ -1551,6 +1570,8 @@ export class DiscordAFKSession {
       active_channel_id: this.activeChannelId,
       requested_channel_id: this.channelId,
       channel_name: this.channelName,
+      self_mute: this.selfMute !== undefined ? this.selfMute : true,
+      self_deaf: this.selfDeaf !== undefined ? this.selfDeaf : true,
       startTimestampMs: this.startTimestampMs,
       activity: this.activity,
       debug_logs: this.debugLogs || []
@@ -1567,3 +1588,5 @@ export default {
     return stub.fetch(request);
   }
 };
+
+
