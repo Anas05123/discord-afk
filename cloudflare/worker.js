@@ -680,7 +680,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 
           <div class="form-group">
             <label class="form-label">Custom Activity while in Room (Optional):</label>
-            <input class="form-input" id="entryVoiceActivity" value="Adobe Illustrator">
+            <input class="form-input" id="entryVoiceActivity" value="" placeholder="Optional Custom Activity (leave empty for none)">
           </div>
           <div class="form-row" style="margin: 12px 0;">
             <label class="checkbox-row" style="margin-right: 16px;">
@@ -959,10 +959,20 @@ async function applyActivity(resetTimer = false, presetKey = '') {
 }
 
 async function clearPresence() {
+  const vAct = document.getElementById('entryVoiceActivity');
+  if (vAct) vAct.value = '';
+  document.getElementById('entryDetails').value = '';
+  document.getElementById('entryState').value = '';
+  document.getElementById('entryLargeText').value = '';
+  document.getElementById('entryLargeImg').value = '';
+  document.getElementById('entrySmallImg').value = '';
+  document.getElementById('entrySmallText').value = '';
+  document.getElementById('entryClientId').value = '';
+  updatePreview();
   await fetch('/api/activity', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ name: '', details: '', state: '' })
+    body: JSON.stringify({ clear: true, name: '', details: '', state: '', application_id: '', client_id: '', large_image: '', large_text: '' })
   });
   document.getElementById('sidebarRpc').textContent = '⚪ RPC: Cleared';
 }
@@ -1311,7 +1321,8 @@ export class DiscordAFKSession {
     this.channelName = "➕・JOIN TO CREATE";
     this.selfMute = true;
     this.selfDeaf = true;
-    this.activity = { ...PRESETS.illustrator };
+    this.activity = { cleared: true, name: "", details: "", state: "", application_id: "", client_id: "" };
+    this.liveVoiceConnected = false;
     this.startTimestampMs = Date.now();
   }
 
@@ -1389,11 +1400,11 @@ export class DiscordAFKSession {
   }
 
   buildPresencePayload() {
-    const act = this.activity || PRESETS.illustrator;
+    const act = this.activity;
     const activities = [];
-    if (act.name) {
+    if (act && !act.cleared && (act.name || act.details || act.state)) {
       const entry = {
-        name: act.name,
+        name: act.name || "Custom Activity",
         type: Number(act.type || 0),
         timestamps: { start: this.startTimestampMs || Date.now() }
       };
@@ -1403,7 +1414,7 @@ export class DiscordAFKSession {
       activities.push(entry);
     }
     return {
-      status: act.status || "online",
+      status: (act && act.status) || "online",
       since: 0,
       activities,
       afk: true
@@ -1480,8 +1491,9 @@ export class DiscordAFKSession {
         this.selfDeaf = Boolean(body.self_deaf);
         await this.ctx.storage.put("selfDeaf", this.selfDeaf);
       }
-      if (body.name) {
-        this.activity.name = body.name;
+      if (body.name && String(body.name).trim()) {
+        this.activity.name = String(body.name).trim();
+        this.activity.cleared = false;
         await this.ctx.storage.put("activity", this.activity);
       }
       await this.resolveValidChannel(token);
@@ -1511,8 +1523,7 @@ export class DiscordAFKSession {
         await this.ctx.storage.put("channelName", this.channelName);
       }
       if (body.in_voice !== undefined) {
-        this.inVoice = Boolean(body.in_voice);
-        await this.ctx.storage.put("inVoice", this.inVoice);
+        this.liveVoiceConnected = Boolean(body.in_voice);
       }
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
@@ -1565,6 +1576,7 @@ export class DiscordAFKSession {
       service: "Discord Studio Pro — 24/7 Cloud Worker",
       account: this.username,
       in_voice: this.inVoice,
+      live_in_voice: this.liveVoiceConnected !== undefined ? this.liveVoiceConnected : this.inVoice,
       guild_id: this.guildId,
       channel_id: this.activeChannelId || this.channelId,
       active_channel_id: this.activeChannelId,
