@@ -424,31 +424,31 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
           <div class="card-title">⚙️ Activity Customization</div>
           <div class="form-group">
             <label class="form-label">Application ID (Client ID):</label>
-            <input class="form-input" id="entryClientId" value="751430009716998144" oninput="updatePreview()">
+            <input class="form-input" id="entryClientId" value="" placeholder="e.g. 1445160676522856458" oninput="updatePreview()">
           </div>
           <div class="form-group">
             <label class="form-label">Details (Line 1):</label>
-            <input class="form-input" id="entryDetails" value="Designing Brand_Identity.ai" oninput="updatePreview()">
+            <input class="form-input" id="entryDetails" value="" placeholder="e.g. Exploring Vice City" oninput="updatePreview()">
           </div>
           <div class="form-group">
             <label class="form-label">State (Line 2):</label>
-            <input class="form-input" id="entryState" value="Vector Artboards & Pen Tool" oninput="updatePreview()">
+            <input class="form-input" id="entryState" value="" placeholder="e.g. Free Roam (Jason & Lucia)" oninput="updatePreview()">
           </div>
           <div class="form-group">
             <label class="form-label">Large Image Key or HTTPS URL:</label>
-            <input class="form-input" id="entryLargeImg" value="https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/ILST.png" oninput="updatePreview()">
+            <input class="form-input" id="entryLargeImg" value="" placeholder="Leave blank to use verified app icon" oninput="updatePreview()">
           </div>
           <div class="form-group">
             <label class="form-label">Large Image Tooltip:</label>
-            <input class="form-input" id="entryLargeText" value="Adobe Illustrator 2026" oninput="updatePreview()">
+            <input class="form-input" id="entryLargeText" value="" placeholder="e.g. Grand Theft Auto VI" oninput="updatePreview()">
           </div>
           <div class="form-group">
             <label class="form-label">Small Badge URL / Key (Optional):</label>
-            <input class="form-input" id="entrySmallImg" value="https://cdn-icons-png.flaticon.com/512/5968/5968472.png" oninput="updatePreview()">
+            <input class="form-input" id="entrySmallImg" value="" placeholder="Optional badge URL" oninput="updatePreview()">
           </div>
           <div class="form-group">
             <label class="form-label">Small Badge Tooltip (Optional):</label>
-            <input class="form-input" id="entrySmallText" value="Vector Engine" oninput="updatePreview()">
+            <input class="form-input" id="entrySmallText" value="" placeholder="Badge tooltip" oninput="updatePreview()">
           </div>
 
           <!-- Elapsed Timer Chooser -->
@@ -522,19 +522,17 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
               <div class="popout-section-lbl">PLAYING A GAME</div>
               <div class="activity-row">
                 <div class="art-canvas">
-                  <div class="large-art" id="prevLargeArt">✒️</div>
-                  <div class="small-badge" id="prevSmallBadge">✒️</div>
+                  <div class="large-art" id="prevLargeArt">🎮</div>
+                  <div class="small-badge" id="prevSmallBadge" style="display:none;">🏷️</div>
                 </div>
                 <div class="act-info">
-                  <div class="act-name" id="prevName">Adobe Illustrator 2026</div>
-                  <div class="act-details" id="prevDetails">Designing Brand_Identity.ai</div>
-                  <div class="act-state" id="prevState">Vector Artboards & Pen Tool</div>
-                  <div class="act-timer" id="prevTimer">00:00 elapsed</div>
+                  <div class="act-name" id="prevName">No Activity Set</div>
+                  <div class="act-details" id="prevDetails">Profile is Idle / Clean</div>
+                  <div class="act-state" id="prevState">Select a preset above to begin</div>
+                  <div class="act-timer" id="prevTimer" style="display:none;">00:00 elapsed</div>
                 </div>
               </div>
-              <div class="popout-buttons" id="prevButtonsBox">
-                <button class="popout-btn" id="prevBtn1">SyntaFlow Project</button>
-              </div>
+              <div class="popout-buttons" id="prevButtonsBox"></div>
             </div>
           </div>
         </div>
@@ -808,7 +806,7 @@ function initGrids() {
   ];
   const pGrid = document.getElementById('presetGrid');
   pGrid.innerHTML = presetList.map(([label, key]) =>
-    \`<button class="preset-btn \${key==='illustrator'?'active':''}" id="pbtn-\${key}" onclick="selectPreset('\${key}')">\${label}</button>\`
+    \`<button class="preset-btn" id="pbtn-\${key}" onclick="selectPreset('\${key}')">\${label}</button>\`
   ).join('');
 
   const bGrid = document.getElementById('badgeGrid');
@@ -860,26 +858,27 @@ function selectBadge(id) {
 }
 
 function updatePreview() {
-  const name = document.getElementById('entryLargeText').value || 'Custom Activity';
-  const details = document.getElementById('entryDetails').value || '';
-  const state = document.getElementById('entryState').value || '';
+  const name = document.getElementById('entryLargeText').value.trim();
+  const details = document.getElementById('entryDetails').value.trim();
+  const state = document.getElementById('entryState').value.trim();
   const largeImg = document.getElementById('entryLargeImg').value.trim();
   const smallImg = document.getElementById('entrySmallImg').value.trim();
 
-  document.getElementById('prevName').textContent = name;
-  document.getElementById('prevDetails').textContent = details;
-  document.getElementById('prevState').textContent = state;
-  document.getElementById('prevTimer').style.display = document.getElementById('cbShowTimer').checked ? 'block' : 'none';
+  const hasAny = Boolean(name || details || state);
+  document.getElementById('prevName').textContent = name || (hasAny ? 'Custom Activity' : 'No Activity Set');
+  document.getElementById('prevDetails').textContent = details || (hasAny ? '' : 'Profile is Idle / Clean');
+  document.getElementById('prevState').textContent = state || (hasAny ? '' : 'Select a preset above to begin');
+  document.getElementById('prevTimer').style.display = (hasAny && document.getElementById('cbShowTimer').checked) ? 'block' : 'none';
 
   const largeBox = document.getElementById('prevLargeArt');
   if (largeImg.startsWith('http')) {
     largeBox.innerHTML = \`<img src="\${largeImg}" onerror="this.parentElement.textContent='🎮'">\`;
   } else {
-    largeBox.textContent = '💻';
+    largeBox.textContent = hasAny ? '💻' : '🎮';
   }
 
   const smallBox = document.getElementById('prevSmallBadge');
-  if (!smallImg) {
+  if (!smallImg || !hasAny) {
     smallBox.style.display = 'none';
   } else {
     smallBox.style.display = 'flex';
@@ -890,13 +889,15 @@ function updatePreview() {
     }
   }
 
-  const b1 = document.getElementById('entryB1Label').value.trim();
-  const b2 = document.getElementById('entryB2Label').value.trim();
+  const b1 = (document.getElementById('entryB1Label')?.value || '').trim();
+  const b2 = (document.getElementById('entryB2Label')?.value || '').trim();
   const btnBox = document.getElementById('prevButtonsBox');
-  let btnsHtml = '';
-  if (b1) btnsHtml += \`<button class="popout-btn">\${b1}</button>\`;
-  if (b2) btnsHtml += \`<button class="popout-btn">\${b2}</button>\`;
-  btnBox.innerHTML = btnsHtml;
+  if (btnBox) {
+    let btnsHtml = '';
+    if (hasAny && b1) btnsHtml += \`<button class="popout-btn">\${b1}</button>\`;
+    if (hasAny && b2) btnsHtml += \`<button class="popout-btn">\${b2}</button>\`;
+    btnBox.innerHTML = btnsHtml;
+  }
 }
 
 function onTimerModeChange(val) {
@@ -968,11 +969,13 @@ async function clearPresence() {
   document.getElementById('entrySmallImg').value = '';
   document.getElementById('entrySmallText').value = '';
   document.getElementById('entryClientId').value = '';
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
   updatePreview();
   await fetch('/api/activity', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ clear: true, name: '', details: '', state: '', application_id: '', client_id: '', large_image: '', large_text: '' })
+    body: JSON.stringify({ clear: true, name: '', details: '', state: '', application_id: '', client_id: '', large_image: '', large_text: '', small_image: '', small_text: '', key: '' })
   });
   document.getElementById('sidebarRpc').textContent = '⚪ RPC: Cleared';
 }
@@ -1287,6 +1290,46 @@ async function refreshTelemetry() {
       const cbDeaf = document.getElementById('cbDeaf');
       if (cbDeaf && document.activeElement !== cbDeaf) cbDeaf.checked = Boolean(d.self_deaf);
     }
+    if (d.activity !== undefined) {
+      const act = d.activity || {};
+      const isCleared = act.cleared || (!act.name && !act.details && !act.state);
+      const isTyping = [
+        'entryClientId', 'entryDetails', 'entryState', 'entryLargeImg',
+        'entryLargeText', 'entrySmallImg', 'entrySmallText'
+      ].some(id => document.activeElement === document.getElementById(id));
+
+      if (isCleared) {
+        document.getElementById('sidebarRpc').textContent = '⚪ RPC: Cleared';
+        if (!isTyping) {
+          document.getElementById('entryClientId').value = '';
+          document.getElementById('entryDetails').value = '';
+          document.getElementById('entryState').value = '';
+          document.getElementById('entryLargeImg').value = '';
+          document.getElementById('entryLargeText').value = '';
+          document.getElementById('entrySmallImg').value = '';
+          document.getElementById('entrySmallText').value = '';
+          document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+          updatePreview();
+        }
+      } else {
+        document.getElementById('sidebarRpc').textContent = '🟢 RPC: Active';
+        if (!isTyping) {
+          if (act.client_id || act.application_id) document.getElementById('entryClientId').value = act.client_id || act.application_id;
+          if (act.details !== undefined) document.getElementById('entryDetails').value = act.details;
+          if (act.state !== undefined) document.getElementById('entryState').value = act.state;
+          if (act.large_image !== undefined) document.getElementById('entryLargeImg').value = act.large_image;
+          if (act.large_text !== undefined || act.name !== undefined) document.getElementById('entryLargeText').value = act.large_text || act.name || '';
+          if (act.small_image !== undefined) document.getElementById('entrySmallImg').value = act.small_image;
+          if (act.small_text !== undefined) document.getElementById('entrySmallText').value = act.small_text;
+          if (act.key) {
+            document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+            const pBtn = document.getElementById('pbtn-' + act.key);
+            if (pBtn) pBtn.classList.add('active');
+          }
+          updatePreview();
+        }
+      }
+    }
   } catch (e) {}
 }
 
@@ -1541,8 +1584,8 @@ export class DiscordAFKSession {
         this.activity.application_id = String(targetAppId);
         this.activity.client_id = String(targetAppId);
       }
-      if (body.clear || (!body.name && !body.details && !body.state)) {
-        this.activity = { cleared: true, name: "", details: "", state: "", application_id: "", client_id: "" };
+      if (body.clear || (!body.name && !body.details && !body.state && !body.preset && !body.key)) {
+        this.activity = { cleared: true, name: "", details: "", state: "", application_id: "", client_id: "", large_image: "", large_text: "", small_image: "", small_text: "", key: "" };
       }
       if (body.reset_timer) {
         this.startTimestampMs = Date.now();

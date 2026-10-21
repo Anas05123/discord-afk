@@ -216,6 +216,8 @@ function hasValidActivity(act) {
   const details = (act.details || "").trim();
   const state = (act.state || "").trim();
   if (!name && !details && !state) return false;
+  if (name.toLowerCase().includes("illustrator") && !details && !state) return false;
+  if ((act.key === "illustrator" || act.client_id === "751430009716998144" || act.application_id === "751430009716998144") && !details && !state) return false;
   return Boolean(name || details || state);
 }
 
