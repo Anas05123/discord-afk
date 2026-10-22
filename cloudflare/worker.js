@@ -772,6 +772,12 @@ const BADGES_DATA = [
 ];
 
 const QUEST_GAMES_DATA = [
+  { id: "oncehuman", name: "Once Human", exe: "once human/once_human.exe", client_id: "1260340082150346932", emoji: "🧬", desc: "Active Quest: 15m for 700 Orbs" },
+  { id: "fc27", name: "EA SPORTS FC™ 27", exe: "ea sports fc 27/fc27.exe", client_id: "1531874756096295054", emoji: "⚽", desc: "Active Quest: 15m for 700 Orbs (Select PC)" },
+  { id: "marvelrivals", name: "Marvel Rivals", exe: "win64/marvel.exe", client_id: "1314395942253756416", emoji: "🦸", desc: "6v6 Super Hero Team Shooter" },
+  { id: "deltaforce", name: "Delta Force", exe: "win64/deltaforceclient-win64-shipping.exe", client_id: "1314682894106497096", emoji: "🪖", desc: "Tactical First-Person Shooter" },
+  { id: "ror2", name: "Risk of Rain 2", exe: "risk of rain 2/risk of rain 2.exe", client_id: "1402418087793528862", emoji: "🌧️", desc: "Multiplayer Roguelike" },
+  { id: "wherewindsmeet", name: "Where Winds Meet", exe: "where winds meet/wherewindsmeet.exe", client_id: "1437509662303059998", emoji: "🌪️", desc: "Wuxia Open-World RPG" },
   { id: "gta6", name: "Grand Theft Auto VI", exe: "gta6.exe", client_id: "1445160676522856458", emoji: "🌴", desc: "Rockstar Games Next-Gen Open World" },
   { id: "nte", name: "Neverness to Everness (NTE)", exe: "htgame.exe", client_id: "1470616226995765409", emoji: "🌌", desc: "Anime Open-World RPG" },
   { id: "giants", name: "March of Giants", exe: "thelineclient-win64-shipping.exe", client_id: "1428223713928810496", emoji: "🗿", desc: "War Strategy MOBA" },

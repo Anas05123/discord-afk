@@ -5,13 +5,70 @@ import shutil
 import subprocess
 import threading
 from typing import Dict, Any, List, Optional, Callable
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 BIN_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bin")
 RUN_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "spoofer_runtime")
 TEMPLATE_EXE = os.path.join(BIN_DIR, "template.exe")
 
 QUEST_GAMES: List[Dict[str, Any]] = [
+    {
+        "id": "oncehuman",
+        "name": "Once Human",
+        "exe": "once human/once_human.exe",
+        "client_id": "1260340082150346932",
+        "emoji": "🧬",
+        "desc": "Active Quest: 15m for 700 Orbs & in-game rewards",
+        "icon": "https://cdn.discordapp.com/app-icons/1260340082150346932/cbce2f168fcfb297ee45f7881180bbab.png"
+    },
+    {
+        "id": "fc27",
+        "name": "EA SPORTS FC™ 27",
+        "exe": "ea sports fc 27/fc27.exe",
+        "client_id": "1531874756096295054",
+        "emoji": "⚽",
+        "desc": "Active Quest: 15m for 700 Orbs (Select PC on Quest card)",
+        "icon": "https://cdn.discordapp.com/app-icons/1531874756096295054/0c17a8c3d7eef9876e5d8363595f9c66.png"
+    },
+    {
+        "id": "marvelrivals",
+        "name": "Marvel Rivals",
+        "exe": "win64/marvel.exe",
+        "client_id": "1314395942253756416",
+        "emoji": "🦸",
+        "desc": "6v6 Super Hero Team Shooter Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1314395942253756416/9ba7fbfeb0e10e12d1bbf90731a29f8c.png"
+    },
+    {
+        "id": "deltaforce",
+        "name": "Delta Force",
+        "exe": "win64/deltaforceclient-win64-shipping.exe",
+        "client_id": "1314682894106497096",
+        "emoji": "🪖",
+        "desc": "Tactical FPS Discord Quest rewards",
+        "icon": "https://cdn.discordapp.com/app-icons/1314682894106497096/9c1a0170a442e979a40733d71ffba6e6.png"
+    },
+    {
+        "id": "ror2",
+        "name": "Risk of Rain 2",
+        "exe": "risk of rain 2/risk of rain 2.exe",
+        "client_id": "1402418087793528862",
+        "emoji": "🌧️",
+        "desc": "Roguelike Discord Quest 15m rewards",
+        "icon": "https://cdn.discordapp.com/app-icons/1402418087793528862/5c3eb807b55cfca626f224b17bf4fe6e.png"
+    },
+    {
+        "id": "wherewindsmeet",
+        "name": "Where Winds Meet",
+        "exe": "where winds meet/wherewindsmeet.exe",
+        "client_id": "1437509662303059998",
+        "emoji": "🌪️",
+        "desc": "Wuxia Open-World Action RPG Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1437509662303059998/1bc98fa85b542e88a08711ae77c2725e.png"
+    },
     {
         "id": "genshin",
         "name": "Genshin Impact",
@@ -163,6 +220,8 @@ class QuestSpoofer:
         self.start_time: float = 0.0
         self.is_running: bool = False
         self.target_seconds: int = 15 * 60  # Default: Standard 15m Discord Quest
+        self.spawned_files: List[str] = []
+        self.spawned_dirs: List[str] = []
 
         # Queue Playlist state
         self.queue: List[Dict[str, Any]] = []
@@ -383,19 +442,44 @@ class QuestSpoofer:
                 self.on_status_change("Error: Template executable missing.", False, None)
             return False
 
-        exe_name = (custom_exe_name or game_info.get("exe", "game.exe")).strip().lower()
-        if not exe_name.endswith(".exe"):
-            exe_name += ".exe"
+        # Support subdirectories (e.g. 'once human/once_human.exe', 'win64/marvel.exe')
+        raw_exe = (custom_exe_name or game_info.get("exe", "game.exe")).strip().replace("\\", "/")
+        if "/" in raw_exe:
+            sub_dir, file_name = raw_exe.rsplit("/", 1)
+        else:
+            sub_dir, file_name = "", raw_exe
 
-        target_exe_path = os.path.join(RUN_DIR, exe_name)
-        game_title = game_info.get("name", exe_name)
+        if not file_name.lower().endswith(".exe"):
+            file_name += ".exe"
+
+        game_title = game_info.get("name", file_name)
 
         try:
-            # Copy template to target game exe name
+            self.spawned_files = []
+            self.spawned_dirs = []
+
+            if sub_dir:
+                target_dir = os.path.join(RUN_DIR, sub_dir.replace("/", os.sep))
+                os.makedirs(target_dir, exist_ok=True)
+                target_exe_path = os.path.join(target_dir, file_name)
+                self.spawned_dirs.append(target_dir)
+
+                # Also place flat copy in root RUN_DIR as fallback
+                flat_copy = os.path.join(RUN_DIR, file_name)
+                try:
+                    shutil.copyfile(TEMPLATE_EXE, flat_copy)
+                    self.spawned_files.append(flat_copy)
+                except Exception:
+                    pass
+            else:
+                target_dir = RUN_DIR
+                target_exe_path = os.path.join(RUN_DIR, file_name)
+
             shutil.copyfile(TEMPLATE_EXE, target_exe_path)
+            self.spawned_files.append(target_exe_path)
 
             # Spawn native Win32 game process with window for Discord process & window detection
-            self.current_process = subprocess.Popen([target_exe_path, game_title, exe_name], cwd=RUN_DIR)
+            self.current_process = subprocess.Popen([target_exe_path, game_title, file_name], cwd=target_dir)
             self.current_game = game_info
             self.current_exe_path = target_exe_path
             self.start_time = time.time()
@@ -403,7 +487,8 @@ class QuestSpoofer:
 
             if self.on_status_change:
                 prefix = f"[Queue {self.current_queue_index + 1}/{len(self.queue)}] " if self.is_queue_mode else ""
-                self.on_status_change(f"{prefix}Running '{game_title}' ({exe_name})", True, game_title)
+                disp_name = f"{sub_dir}/{file_name}" if sub_dir else file_name
+                self.on_status_change(f"{prefix}Running '{game_title}' ({disp_name})", True, game_title)
 
             self._tick_token += 1
             if self._stop_event:
@@ -421,7 +506,7 @@ class QuestSpoofer:
             return False
 
     def _cleanup_process(self):
-        """Terminates the current dummy game process and removes the temporary executable."""
+        """Terminates the current dummy game process and removes the temporary executable and subdirectories."""
         self._tick_token += 1
         if self._stop_event:
             self._stop_event.set()
@@ -431,16 +516,29 @@ class QuestSpoofer:
                 self.current_process.terminate()
                 self.current_process.wait(timeout=1.0)
             except Exception:
-                pass
+                try:
+                    self.current_process.kill()
+                except Exception:
+                    pass
             self.current_process = None
 
-        if self.current_exe_path and os.path.exists(self.current_exe_path):
-            try:
-                time.sleep(0.2)
-                os.remove(self.current_exe_path)
-            except Exception:
-                pass
-            self.current_exe_path = None
+        time.sleep(0.2)
+        for f_path in list(self.spawned_files):
+            if f_path and os.path.exists(f_path):
+                try:
+                    os.remove(f_path)
+                except Exception:
+                    pass
+        self.spawned_files.clear()
+        self.current_exe_path = None
+
+        for d_path in list(self.spawned_dirs):
+            if d_path and os.path.exists(d_path) and os.path.abspath(d_path) != os.path.abspath(RUN_DIR):
+                try:
+                    os.rmdir(d_path)
+                except Exception:
+                    pass
+        self.spawned_dirs.clear()
 
     def stop(self):
         """Halts the spoofer and resets queue status."""

@@ -712,7 +712,7 @@ class MainWindow(ctk.CTk):
 
         info_label = ctk.CTkLabel(
             g_card,
-            text="Accept the quest in Discord (User Settings > Gift Inventory), then click Launch Spoof below:",
+            text="Accept the quest in Discord (User Settings > Gift Inventory), then click Launch Spoof below:\n💡 Multi-platform quests (FC 27, Once Human): select 'PC' under 'Select a platform' on Discord first!",
             font=ctk.CTkFont(family="Segoe UI", size=11),
             text_color=TEXT_MUTED,
             justify="left"
@@ -724,7 +724,7 @@ class MainWindow(ctk.CTk):
 
         btn_queue_all = ctk.CTkButton(
             top_btn_row,
-            text="⚡ Auto-Queue Top Quests (NTE + Giants + Hellraiser + Genshin)",
+            text="⚡ Auto-Queue Active Quests (Once Human + FC 27 + Marvel Rivals + Genshin)",
             height=32,
             fg_color=COLOR_BLURPLE,
             hover_color="#4752c4",
@@ -2283,13 +2283,13 @@ class MainWindow(ctk.CTk):
             self.lbl_quest_status.configure(text="⚠️ No active queue running to skip.", text_color=TEXT_MUTED)
 
     def _queue_top_games(self):
-        top_ids = ["nte", "giants", "hellraiser", "genshin"]
+        top_ids = ["oncehuman", "fc27", "marvelrivals", "deltaforce", "ror2", "genshin"]
         for tid in top_ids:
             found = next((g for g in QUEST_GAMES if g["id"] == tid), None)
             if found and not any(item["game"].get("id") == tid for item in self.quest_spoofer.queue):
                 self.quest_spoofer.add_to_queue(found)
         self.lbl_quest_status.configure(
-            text=f"⚡ Queued Top Quests (NTE, Giants, Hellraiser, Genshin) — {len(self.quest_spoofer.queue)} in queue",
+            text=f"⚡ Queued Active Quests (Once Human, FC 27, Marvel Rivals, Delta Force) — {len(self.quest_spoofer.queue)} in queue",
             text_color=COLOR_GREEN
         )
 

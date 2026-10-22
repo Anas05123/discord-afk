@@ -5,10 +5,10 @@ VERIFIED_PRESETS = [
     {
         "key": "gta6",
         "name": "Grand Theft Auto VI",
-        "category": "Gaming and Open World",
+        "category": "Gaming",
         "client_id": "1445160676522856458",
         "details": "Exploring Vice City",
-        "state": "Free Roam (Jason and Lucia)",
+        "state": "Free Roam (Jason & Lucia)",
         "large_image": "",
         "large_text": "Grand Theft Auto VI",
         "small_image": "",
@@ -266,8 +266,143 @@ CURATED_GAMES: List[Dict[str, Any]] = [
         "category": "Creative & Design",
         "icon": "https://cdn-icons-png.flaticon.com/512/5968/5968705.png",
         "keywords": ["figma", "ui", "ux", "prototype", "design"]
+    },
+    {
+        "id": "1260340082150346932",
+        "name": "Once Human",
+        "exe": "once human/once_human.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1260340082150346932/cbce2f168fcfb297ee45f7881180bbab.png",
+        "keywords": ["once human", "oncehuman", "once_human", "once human quest"]
+    },
+    {
+        "id": "1531874756096295054",
+        "name": "EA SPORTS FC™ 27",
+        "exe": "ea sports fc 27/fc27.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1531874756096295054/0c17a8c3d7eef9876e5d8363595f9c66.png",
+        "keywords": ["fc27", "fc 27", "ea fc 27", "ea sports fc 27", "fifa 27", "ea sports fc"]
+    },
+    {
+        "id": "1314395942253756416",
+        "name": "Marvel Rivals",
+        "exe": "win64/marvel.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1314395942253756416/9ba7fbfeb0e10e12d1bbf90731a29f8c.png",
+        "keywords": ["marvel", "marvel rivals", "marvelrivals"]
+    },
+    {
+        "id": "1314682894106497096",
+        "name": "Delta Force",
+        "exe": "win64/deltaforceclient-win64-shipping.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1314682894106497096/9c1a0170a442e979a40733d71ffba6e6.png",
+        "keywords": ["delta force", "deltaforce", "deltaforceclient"]
+    },
+    {
+        "id": "1402418087793528862",
+        "name": "Risk of Rain 2",
+        "exe": "risk of rain 2/risk of rain 2.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1402418087793528862/5c3eb807b55cfca626f224b17bf4fe6e.png",
+        "keywords": ["risk of rain 2", "ror2", "risk of rain"]
+    },
+    {
+        "id": "1437509662303059998",
+        "name": "Where Winds Meet",
+        "exe": "where winds meet/wherewindsmeet.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1437509662303059998/1bc98fa85b542e88a08711ae77c2725e.png",
+        "keywords": ["where winds meet", "wwm"]
     }
 ]
+
+KNOWN_EXES: Dict[str, Dict[str, Any]] = {
+    "once human": {
+        "id": "1260340082150346932",
+        "name": "Once Human",
+        "exe": "once human/once_human.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1260340082150346932/cbce2f168fcfb297ee45f7881180bbab.png"
+    },
+    "oncehuman": {
+        "id": "1260340082150346932",
+        "name": "Once Human",
+        "exe": "once human/once_human.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1260340082150346932/cbce2f168fcfb297ee45f7881180bbab.png"
+    },
+    "once_human": {
+        "id": "1260340082150346932",
+        "name": "Once Human",
+        "exe": "once human/once_human.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1260340082150346932/cbce2f168fcfb297ee45f7881180bbab.png"
+    },
+    "once_human.exe": {
+        "id": "1260340082150346932",
+        "name": "Once Human",
+        "exe": "once human/once_human.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1260340082150346932/cbce2f168fcfb297ee45f7881180bbab.png"
+    },
+    "fc 27": {
+        "id": "1531874756096295054",
+        "name": "EA SPORTS FC™ 27",
+        "exe": "ea sports fc 27/fc27.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1531874756096295054/0c17a8c3d7eef9876e5d8363595f9c66.png"
+    },
+    "fc27": {
+        "id": "1531874756096295054",
+        "name": "EA SPORTS FC™ 27",
+        "exe": "ea sports fc 27/fc27.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1531874756096295054/0c17a8c3d7eef9876e5d8363595f9c66.png"
+    },
+    "ea sports fc 27": {
+        "id": "1531874756096295054",
+        "name": "EA SPORTS FC™ 27",
+        "exe": "ea sports fc 27/fc27.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1531874756096295054/0c17a8c3d7eef9876e5d8363595f9c66.png"
+    },
+    "fc27.exe": {
+        "id": "1531874756096295054",
+        "name": "EA SPORTS FC™ 27",
+        "exe": "ea sports fc 27/fc27.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1531874756096295054/0c17a8c3d7eef9876e5d8363595f9c66.png"
+    },
+    "marvel rivals": {
+        "id": "1314395942253756416",
+        "name": "Marvel Rivals",
+        "exe": "win64/marvel.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1314395942253756416/9ba7fbfeb0e10e12d1bbf90731a29f8c.png"
+    },
+    "delta force": {
+        "id": "1314682894106497096",
+        "name": "Delta Force",
+        "exe": "win64/deltaforceclient-win64-shipping.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1314682894106497096/9c1a0170a442e979a40733d71ffba6e6.png"
+    },
+    "risk of rain 2": {
+        "id": "1402418087793528862",
+        "name": "Risk of Rain 2",
+        "exe": "risk of rain 2/risk of rain 2.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1402418087793528862/5c3eb807b55cfca626f224b17bf4fe6e.png"
+    },
+    "where winds meet": {
+        "id": "1437509662303059998",
+        "name": "Where Winds Meet",
+        "exe": "where winds meet/wherewindsmeet.exe",
+        "category": "Discord Quest",
+        "icon": "https://cdn.discordapp.com/app-icons/1437509662303059998/1bc98fa85b542e88a08711ae77c2725e.png"
+    }
+}
 
 class GamesDatabase:
     _cache: Optional[List[Dict[str, Any]]] = None
@@ -285,7 +420,7 @@ class GamesDatabase:
         for c in candidates:
             if not c:
                 continue
-            cleaned = c.replace("\\", "/").split("/")[-1].strip()
+            cleaned = c.replace("\\", "/").strip().lstrip("/")
             if cleaned.lower().endswith(".exe"):
                 return cleaned
         clean_name = "".join(ch for ch in name.lower() if ch.isalnum())
@@ -387,7 +522,12 @@ class GamesDatabase:
                 "icon": "🎮"
             }
 
-        # Check search results
+        # 1. Check known quest executables and names first
+        raw_lower = raw.lower()
+        if raw_lower in KNOWN_EXES:
+            return KNOWN_EXES[raw_lower]
+
+        # 2. Check search results
         results = cls.search_discord_games(raw, limit=1)
         if results:
             return results[0]
