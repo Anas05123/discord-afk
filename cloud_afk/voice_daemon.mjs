@@ -474,7 +474,6 @@ function connectGateway() {
                 const cName = await resolveChannelName(localActiveChannelId);
 
                 isUserActiveOnOtherClient = false;
-                const cName = await resolveChannelName(localActiveChannelId);
                 console.log(`[VoiceDaemon] 🛡️ Resumed active voice session in room "${cName}" (${localActiveChannelId}) [session: ${stateSession}].`);
                 reportTelemetryToCloud(localActiveChannelId, true, cName);
                 break;
