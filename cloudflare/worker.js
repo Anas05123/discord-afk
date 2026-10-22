@@ -1367,9 +1367,12 @@ export class DiscordAFKSession {
     this.activity = { cleared: true, name: "", details: "", state: "", application_id: "", client_id: "" };
     this.liveVoiceConnected = false;
     this.startTimestampMs = Date.now();
+    this.leaderInstanceId = null;
   }
 
   async initState() {
+    const savedLeader = await this.ctx.storage.get("leaderInstanceId");
+    if (savedLeader) this.leaderInstanceId = savedLeader;
     const savedAct = await this.ctx.storage.get("activity");
     const savedStart = await this.ctx.storage.get("startTimestampMs");
     const savedUser = await this.ctx.storage.get("username");
@@ -1557,6 +1560,12 @@ export class DiscordAFKSession {
 
     if (request.method === "POST" && url.pathname.startsWith("/api/telemetry")) {
       const body = await request.json().catch(() => ({}));
+      if (body.instance_id) {
+        if (body.register_leader || !this.leaderInstanceId) {
+          this.leaderInstanceId = String(body.instance_id);
+          await this.ctx.storage.put("leaderInstanceId", this.leaderInstanceId);
+        }
+      }
       if (body.active_channel_id) {
         this.activeChannelId = String(body.active_channel_id);
         await this.ctx.storage.put("activeChannelId", this.activeChannelId);
@@ -1568,7 +1577,7 @@ export class DiscordAFKSession {
       if (body.in_voice !== undefined) {
         this.liveVoiceConnected = Boolean(body.in_voice);
       }
-      return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ ok: true, leader_instance_id: this.leaderInstanceId }), { headers: { "Content-Type": "application/json" } });
     }
 
     if (request.method === "POST" && url.pathname.startsWith("/api/activity")) {
@@ -1620,6 +1629,7 @@ export class DiscordAFKSession {
       status: this.inVoice ? "online" : "connected",
       service: "Discord Studio Pro — 24/7 Cloud Worker",
       account: this.username,
+      leader_instance_id: this.leaderInstanceId || null,
       in_voice: this.inVoice,
       live_in_voice: this.liveVoiceConnected !== undefined ? this.liveVoiceConnected : this.inVoice,
       guild_id: this.guildId,

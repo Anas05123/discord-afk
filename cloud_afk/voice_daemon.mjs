@@ -25,6 +25,22 @@ const WORKER_URL = (process.env.WORKER_URL || "https://discord-afk-keepalive.ana
 const PORT = process.env.PORT || 10000;
 const DEFAULT_JTC_LOBBY = "1484570674659070063";
 
+const daemonInstanceId = `runner_${process.env.GITHUB_RUN_ID || Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+console.log(`[VoiceDaemon] 🆔 Instance ID: ${daemonInstanceId}`);
+
+// GitHub Actions cron runs every 5 hours (300 mins).
+// To prevent runner overlaps, gracefully exit at 4h 50m (290 mins) so the new runner starts cleanly without conflict.
+const RUNNER_LIFETIME_MS = 290 * 60 * 1000;
+setTimeout(() => {
+  console.log("[VoiceDaemon] ⏱️ 4h50m runner lifetime reached. Gracefully rotating for scheduled runner...");
+  if (ws && ws.readyState === 1) {
+    try {
+      ws.close(1000, "Scheduled rotation handoff");
+    } catch (e) {}
+  }
+  process.exit(0);
+}, RUNNER_LIFETIME_MS);
+
 const channelNamesCache = new Map();
 
 let ws = null;
@@ -275,6 +291,17 @@ async function syncWithCloudWorker() {
     if (!r.ok) return;
     const remote = await r.json();
 
+    // 0. Leader Lock Check: If another runner took over leadership, gracefully exit this older runner
+    if (remote.leader_instance_id && remote.leader_instance_id !== daemonInstanceId) {
+      console.log(`[VoiceDaemon] 🛑 Newer 24/7 runner (${remote.leader_instance_id}) active. Gracefully yielding.`);
+      if (ws && ws.readyState === 1) {
+        try {
+          ws.close(1000, "Superseded by newer runner");
+        } catch (e) {}
+      }
+      process.exit(0);
+    }
+
     // 1. Sync Guild ID
     if (remote.guild_id && remote.guild_id !== localGuildId) {
       localGuildId = remote.guild_id;
@@ -394,12 +421,16 @@ async function syncWithCloudWorker() {
   }
 }
 
-async function reportTelemetryToCloud(activeChan, inVoice, chanName = "") {
+async function reportTelemetryToCloud(activeChan, inVoice, chanName = "", registerLeader = false) {
   try {
     const payload = {
+      instance_id: daemonInstanceId,
       active_channel_id: activeChan,
       in_voice: inVoice
     };
+    if (registerLeader) {
+      payload.register_leader = true;
+    }
     if (chanName) {
       payload.channel_name = chanName;
     }
@@ -485,6 +516,9 @@ function connectGateway() {
         // Start 2.5s Cloud Dashboard Sync Loop
         if (syncTimer) clearInterval(syncTimer);
         syncTimer = setInterval(syncWithCloudWorker, 2500);
+
+        // Register this runner as the active leader in cloud telemetry
+        reportTelemetryToCloud(localActiveChannelId, localInVoice, "", true);
 
         // Immediate first sync with Cloudflare worker
         setTimeout(syncWithCloudWorker, 300);
