@@ -37,6 +37,8 @@ let heartbeatTimer = null;
 let syncTimer = null;
 let isConnected = false;
 let lastHeartbeatAck = true;
+let lastJoinInitiatedMs = 0;
+let lastOpcode4SentMs = 0;
 
 let localGuildId = process.env.GUILD_ID || cfg.saved_guild_id || "1442511921898192917";
 let localChannelId = process.env.CHANNEL_ID || cfg.saved_channel_id || DEFAULT_JTC_LOBBY;
@@ -140,9 +142,15 @@ async function verifyChannelExists(chanId) {
 
 function resolveAppInfo(act) {
   const givenAppId = String(act.application_id || act.client_id || "").trim();
+  const rawKey = String(act.key || "").toLowerCase().trim();
   const rawName = String(act.name || "").toLowerCase().trim();
   const rawLargeText = String(act.large_text || "").toLowerCase().trim();
   const combined = `${rawName} ${rawLargeText}`.trim();
+
+  // 0. Direct match by preset key if present
+  if (rawKey && APP_REGISTRY[rawKey]) {
+    return APP_REGISTRY[rawKey];
+  }
 
   // 1. Keyword matching on name or large_text first (prioritizes user-selected title over stale ID)
   if (combined.includes("grand theft auto") || combined.includes("gta 6") || combined.includes("gta vi")) {
@@ -278,8 +286,22 @@ async function syncWithCloudWorker() {
     desiredDeaf = remote.self_deaf !== undefined ? Boolean(remote.self_deaf) : true;
     desiredMute = remote.self_mute !== undefined ? Boolean(remote.self_mute) : true;
 
+    // If the dashboard requested a new channel, force join regardless of previous yield
+    if (remote.requested_channel_id && remote.requested_channel_id !== lastTargetChan && shouldBeInVoice) {
+      console.log(`[VoiceDaemon] 🎯 Dashboard requested new channel ${remote.requested_channel_id} (clearing any PC yield lock)`);
+      isUserActiveOnOtherClient = false;
+      localInVoice = false;
+      targetChan = remote.requested_channel_id;
+    }
+
+    // If we are NOT in voice at all, user is not active in voice on PC either!
+    if (!localInVoice && shouldBeInVoice) {
+      isUserActiveOnOtherClient = false;
+    }
+
     if (isUserActiveOnOtherClient) {
       // User is actively in voice on PC / mobile! DO NOT touch voice or send Opcode 4!
+      return;
     } else if (shouldBeInVoice) {
       if (!localInVoice) {
         // Verify channel exists before joining (prevent joining deleted dynamic room)
@@ -287,9 +309,13 @@ async function syncWithCloudWorker() {
         if (!exists) {
           console.log(`[VoiceDaemon] ⚠️ Target channel ${targetChan} was deleted. Falling back to lobby: ${DEFAULT_JTC_LOBBY}`);
           targetChan = DEFAULT_JTC_LOBBY;
+          localChannelId = targetChan;
+          lastTargetChan = targetChan;
         }
 
         console.log(`[VoiceDaemon] 🔊 Connecting to Voice Room: ${targetChan} (guild: ${localGuildId}) [mute=${desiredMute}, deaf=${desiredDeaf}]`);
+        lastJoinInitiatedMs = Date.now();
+        lastOpcode4SentMs = Date.now();
         ws.send(JSON.stringify({
           op: 4,
           d: {
@@ -308,12 +334,11 @@ async function syncWithCloudWorker() {
         const activeChan = localActiveChannelId || localChannelId;
         const needsUpdate = (
           desiredMute !== lastMute ||
-          desiredDeaf !== lastDeaf ||
-          (currentVoiceDeaf !== null && currentVoiceDeaf !== desiredDeaf) ||
-          (currentVoiceMute !== null && currentVoiceMute !== desiredMute)
+          desiredDeaf !== lastDeaf
         );
-        if (needsUpdate) {
-          console.log(`[VoiceDaemon] 🎙️ Enforcing Voice State in ${activeChan}: Mute=${desiredMute}, Deaf=${desiredDeaf} (Discord reported: mute=${currentVoiceMute}, deaf=${currentVoiceDeaf})`);
+        if (needsUpdate && (Date.now() - lastOpcode4SentMs) > 6000) {
+          console.log(`[VoiceDaemon] 🎙️ Enforcing Voice State in ${activeChan}: Mute=${desiredMute}, Deaf=${desiredDeaf}`);
+          lastOpcode4SentMs = Date.now();
           ws.send(JSON.stringify({
             op: 4,
             d: {
@@ -330,6 +355,7 @@ async function syncWithCloudWorker() {
     } else {
       if (localInVoice) {
         console.log("[VoiceDaemon] ⚪ Cloud requested Leave Voice Room");
+        lastOpcode4SentMs = Date.now();
         ws.send(JSON.stringify({
           op: 4,
           d: {
@@ -447,13 +473,9 @@ function connectGateway() {
                 const stateSession = String(myState.session_id || "");
                 const cName = await resolveChannelName(localActiveChannelId);
 
-                if (mySessionId && stateSession && stateSession !== mySessionId) {
-                  isUserActiveOnOtherClient = true;
-                  console.log(`[VoiceDaemon] 👤 User is ALREADY active in voice on PC/Mobile in room "${cName}" (${localActiveChannelId}) [session: ${stateSession}]. Yielding voice control.`);
-                } else {
-                  isUserActiveOnOtherClient = false;
-                  console.log(`[VoiceDaemon] 🛡️ User is in Voice Room "${cName}" (${localActiveChannelId}) in guild ${localGuildId}. Current states: mute=${currentVoiceMute}, deaf=${currentVoiceDeaf}`);
-                }
+                isUserActiveOnOtherClient = false;
+                const cName = await resolveChannelName(localActiveChannelId);
+                console.log(`[VoiceDaemon] 🛡️ Resumed active voice session in room "${cName}" (${localActiveChannelId}) [session: ${stateSession}].`);
                 reportTelemetryToCloud(localActiveChannelId, true, cName);
                 break;
               }
@@ -476,7 +498,8 @@ function connectGateway() {
       } else if (data.op === 0 && data.t === "VOICE_STATE_UPDATE") {
         if (String(data.d?.user_id) === myUserId) {
           const eventSessionId = String(data.d?.session_id || "");
-          const isOtherClient = Boolean(mySessionId && eventSessionId && eventSessionId !== mySessionId);
+          const timeSinceDaemonJoin = Date.now() - lastJoinInitiatedMs;
+          const justJoinedByDaemon = timeSinceDaemonJoin < 10000;
 
           if (data.d?.channel_id) {
             localActiveChannelId = String(data.d.channel_id);
@@ -486,6 +509,19 @@ function connectGateway() {
             currentVoiceDeaf = Boolean(data.d.self_deaf);
             const cName = await resolveChannelName(localActiveChannelId);
 
+            if (justJoinedByDaemon) {
+              // This is the daemon's own join or the server's JTC bot moving us into our room!
+              isUserActiveOnOtherClient = false;
+              if (resumeAfkTimer) {
+                clearTimeout(resumeAfkTimer);
+                resumeAfkTimer = null;
+              }
+              console.log(`[VoiceDaemon] ✅ Daemon Active in Voice Room: "${cName}" (${localActiveChannelId}) [mute=${currentVoiceMute}, deaf=${currentVoiceDeaf}]`);
+              reportTelemetryToCloud(localActiveChannelId, true, cName);
+              return;
+            }
+
+            const isOtherClient = Boolean(mySessionId && eventSessionId && eventSessionId !== mySessionId);
             if (isOtherClient) {
               // The user actively joined or moved voice from PC / Mobile! DO NOT SEND OPCODE 4! DO NOT DISCONNECT THEM!
               isUserActiveOnOtherClient = true;
@@ -493,7 +529,7 @@ function connectGateway() {
                 clearTimeout(resumeAfkTimer);
                 resumeAfkTimer = null;
               }
-              console.log(`[VoiceDaemon] 👤 User moved/active in voice on PC/Mobile (room: "${cName}" - ${localActiveChannelId}, session: ${eventSessionId}). Yielding voice control.`);
+              console.log(`[VoiceDaemon] 👤 User active in voice on PC/Mobile (room: "${cName}" - ${localActiveChannelId}, session: ${eventSessionId}). Yielding voice control.`);
               reportTelemetryToCloud(localActiveChannelId, true, cName);
               return;
             }
@@ -504,25 +540,9 @@ function connectGateway() {
               return;
             }
 
-            // It is our own daemon session:
-            console.log(`[VoiceDaemon] ✅ Daemon Active in Voice Room: "${cName}" (${localActiveChannelId}) [mute=${currentVoiceMute}, deaf=${currentVoiceDeaf}]`);
+            // Normal voice state update on our session
+            console.log(`[VoiceDaemon] ✅ Voice State in Room: "${cName}" (${localActiveChannelId}) [mute=${currentVoiceMute}, deaf=${currentVoiceDeaf}]`);
             reportTelemetryToCloud(localActiveChannelId, true, cName);
-
-            // If Discord reported that we are NOT deafened (or not muted) but desired is true, enforce immediately on our session!
-            if ((desiredDeaf && !currentVoiceDeaf) || (desiredMute && !currentVoiceMute)) {
-              console.log(`[VoiceDaemon] ⚡ Enforcing requested mute=${desiredMute}, deaf=${desiredDeaf} in room ${localActiveChannelId}`);
-              ws.send(JSON.stringify({
-                op: 4,
-                d: {
-                  guild_id: String(localGuildId),
-                  channel_id: String(localActiveChannelId),
-                  self_mute: desiredMute,
-                  self_deaf: desiredDeaf
-                }
-              }));
-              lastMute = desiredMute;
-              lastDeaf = desiredDeaf;
-            }
           } else {
             console.log(`[VoiceDaemon] ⚠️ Disconnected from voice channel (session: ${eventSessionId}, wasOnOtherDevice: ${isUserActiveOnOtherClient})`);
             localActiveChannelId = null;
@@ -533,38 +553,37 @@ function connectGateway() {
             lastDeaf = null;
             reportTelemetryToCloud(null, false, "");
 
-            if (isUserActiveOnOtherClient) {
-              console.log(`[VoiceDaemon] ⏳ User disconnected on PC/mobile. Resuming 24/7 AFK mode in 5 seconds...`);
-              if (resumeAfkTimer) clearTimeout(resumeAfkTimer);
-              resumeAfkTimer = setTimeout(async () => {
-                isUserActiveOnOtherClient = false;
-                resumeAfkTimer = null;
-                console.log(`[VoiceDaemon] 🔄 Resuming 24/7 AFK mode now that PC session is closed...`);
+            if (resumeAfkTimer) clearTimeout(resumeAfkTimer);
+            resumeAfkTimer = setTimeout(async () => {
+              isUserActiveOnOtherClient = false;
+              resumeAfkTimer = null;
+              console.log(`[VoiceDaemon] 🔄 Auto-resuming 24/7 AFK mode...`);
 
-                let target = localChannelId || DEFAULT_JTC_LOBBY;
-                const exists = await verifyChannelExists(target);
-                if (!exists) {
-                  console.log(`[VoiceDaemon] ⚠️ Previous channel ${target} was deleted. Falling back to lobby: ${DEFAULT_JTC_LOBBY}`);
-                  target = DEFAULT_JTC_LOBBY;
-                  localChannelId = target;
-                }
+              let target = localChannelId || DEFAULT_JTC_LOBBY;
+              const exists = await verifyChannelExists(target);
+              if (!exists) {
+                console.log(`[VoiceDaemon] ⚠️ Previous channel ${target} was deleted. Falling back to lobby: ${DEFAULT_JTC_LOBBY}`);
+                target = DEFAULT_JTC_LOBBY;
+                localChannelId = target;
+              }
 
-                if (isConnected && ws && ws.readyState === 1) {
-                  ws.send(JSON.stringify({
-                    op: 4,
-                    d: {
-                      guild_id: String(localGuildId),
-                      channel_id: String(target),
-                      self_mute: desiredMute,
-                      self_deaf: desiredDeaf
-                    }
-                  }));
-                  lastTargetChan = target;
-                  lastMute = desiredMute;
-                  lastDeaf = desiredDeaf;
-                }
-              }, 5000);
-            }
+              if (isConnected && ws && ws.readyState === 1) {
+                lastJoinInitiatedMs = Date.now();
+                lastOpcode4SentMs = Date.now();
+                ws.send(JSON.stringify({
+                  op: 4,
+                  d: {
+                    guild_id: String(localGuildId),
+                    channel_id: String(target),
+                    self_mute: desiredMute,
+                    self_deaf: desiredDeaf
+                  }
+                }));
+                lastTargetChan = target;
+                lastMute = desiredMute;
+                lastDeaf = desiredDeaf;
+              }
+            }, 4000);
           }
         }
       } else if (data.op === 1) {

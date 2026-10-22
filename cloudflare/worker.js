@@ -838,11 +838,11 @@ function selectPreset(key) {
   document.getElementById('entryDetails').value = p.details;
   document.getElementById('entryState').value = p.state;
   document.getElementById('entryLargeImg').value = p.large_image;
-  document.getElementById('entryLargeText').value = p.large_text;
+  document.getElementById('entryLargeText').value = p.name || p.large_text;
   document.getElementById('entrySmallImg').value = p.small_image;
   document.getElementById('entrySmallText').value = p.small_text;
   updatePreview();
-  applyActivity();
+  applyActivity(false, key);
 }
 
 function selectBadge(id) {
@@ -1573,19 +1573,21 @@ export class DiscordAFKSession {
 
     if (request.method === "POST" && url.pathname.startsWith("/api/activity")) {
       const body = await request.json().catch(() => ({}));
-      if (body.preset && PRESETS[body.preset]) {
-        this.activity = { ...PRESETS[body.preset] };
-      }
-      for (const k of ["name", "details", "state", "status", "application_id", "client_id", "large_image", "large_text", "small_image", "small_text", "key"]) {
-        if (body[k] !== undefined) this.activity[k] = body[k];
-      }
-      const targetAppId = body.application_id || body.client_id;
-      if (targetAppId) {
-        this.activity.application_id = String(targetAppId);
-        this.activity.client_id = String(targetAppId);
-      }
       if (body.clear || (!body.name && !body.details && !body.state && !body.preset && !body.key)) {
         this.activity = { cleared: true, name: "", details: "", state: "", application_id: "", client_id: "", large_image: "", large_text: "", small_image: "", small_text: "", key: "" };
+      } else {
+        const pKey = body.key || body.preset;
+        if (pKey && PRESETS[pKey]) {
+          this.activity = { ...PRESETS[pKey] };
+        }
+        for (const k of ["name", "details", "state", "status", "application_id", "client_id", "large_image", "large_text", "small_image", "small_text", "key"]) {
+          if (body[k] !== undefined && body[k] !== "") this.activity[k] = body[k];
+        }
+        const targetAppId = body.application_id || body.client_id;
+        if (targetAppId) {
+          this.activity.application_id = String(targetAppId);
+          this.activity.client_id = String(targetAppId);
+        }
       }
       if (body.reset_timer) {
         this.startTimestampMs = Date.now();
