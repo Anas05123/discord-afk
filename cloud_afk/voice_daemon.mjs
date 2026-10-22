@@ -29,13 +29,14 @@ const daemonInstanceId = `runner_${process.env.GITHUB_RUN_ID || Date.now()}_${Ma
 console.log(`[VoiceDaemon] 🆔 Instance ID: ${daemonInstanceId}`);
 
 // GitHub Actions cron runs every 5 hours (300 mins).
-// To prevent runner overlaps, gracefully exit at 4h 50m (290 mins) so the new runner starts cleanly without conflict.
-const RUNNER_LIFETIME_MS = 290 * 60 * 1000;
+// The Leader Lock hands over voice seamlessly to the new runner with ZERO downtime.
+// This 5h 20m (320 mins) timeout serves as a safety fallback ceiling.
+const RUNNER_LIFETIME_MS = 320 * 60 * 1000;
 setTimeout(() => {
-  console.log("[VoiceDaemon] ⏱️ 4h50m runner lifetime reached. Gracefully rotating for scheduled runner...");
+  console.log("[VoiceDaemon] ⏱️ Maximum 5h20m lifetime reached. Gracefully rotating...");
   if (ws && ws.readyState === 1) {
     try {
-      ws.close(1000, "Scheduled rotation handoff");
+      ws.close(1000, "Safety fallback rotation");
     } catch (e) {}
   }
   process.exit(0);
