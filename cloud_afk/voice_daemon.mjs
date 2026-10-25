@@ -3,6 +3,9 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 
+// ============================================================================
+// CONFIGURATION & INITIALIZATION
+// ============================================================================
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const cfgPath = path.resolve(__dirname, "..", "config.json");
 
@@ -26,14 +29,12 @@ const PORT = process.env.PORT || 10000;
 const DEFAULT_JTC_LOBBY = "1484570674659070063";
 
 const daemonInstanceId = `runner_${process.env.GITHUB_RUN_ID || Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-console.log(`[VoiceDaemon] 🆔 Instance ID: ${daemonInstanceId}`);
 
 // GitHub Actions cron runs every 5 hours (300 mins).
-// The Leader Lock hands over voice seamlessly to the new runner with ZERO downtime.
-// This 5h 20m (320 mins) timeout serves as a safety fallback ceiling.
+// Safety fallback rotation ceiling: 5h 20m (320 mins)
 const RUNNER_LIFETIME_MS = 320 * 60 * 1000;
 setTimeout(() => {
-  console.log("[VoiceDaemon] ⏱️ Maximum 5h20m lifetime reached. Gracefully rotating...");
+  Logger.warn("LIFETIME", "Maximum 5h20m lifetime reached. Gracefully rotating session...");
   if (ws && ws.readyState === 1) {
     try {
       ws.close(1000, "Safety fallback rotation");
@@ -42,24 +43,178 @@ setTimeout(() => {
   process.exit(0);
 }, RUNNER_LIFETIME_MS);
 
+// ============================================================================
+// REFINED STRUCTURED LOGGER
+// ============================================================================
+class Logger {
+  static _ts() {
+    const d = new Date();
+    const pad = (n, len = 2) => String(n).padStart(len, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
+  }
+
+  static info(tag, message, meta = "") {
+    const metaStr = meta ? ` | ${meta}` : "";
+    console.log(`[${this._ts()}] [INFO] [${tag}] ${message}${metaStr}`);
+  }
+
+  static warn(tag, message, meta = "") {
+    const metaStr = meta ? ` | ${meta}` : "";
+    console.warn(`[${this._ts()}] [WARN] [${tag}] ${message}${metaStr}`);
+  }
+
+  static error(tag, message, meta = "") {
+    const metaStr = meta ? ` | ${meta}` : "";
+    console.error(`[${this._ts()}] [ERROR] [${tag}] ${message}${metaStr}`);
+  }
+
+  static countdown(remainingSec, totalSec, reason) {
+    console.log(`[${this._ts()}] [COOLDOWN] ⏳ ${reason}: ${remainingSec}s remaining (of ${totalSec}s)...`);
+  }
+}
+
+Logger.info("INIT", `Discord Voice AFK Runner initialized. Instance: ${daemonInstanceId}`);
+
+// ============================================================================
+// ANTI-GLITCH CIRCUIT BREAKER & COOLDOWN CONTROLLER
+// ============================================================================
+class AntiGlitchGuard {
+  constructor() {
+    this.recentJoins = []; // timestamps in ms
+    this.cooldownUntil = 0;
+    this.consecutiveFailures = 0;
+    this.countdownTimer = null;
+    this.isJtcMovePending = false;
+    this.jtcMoveDeadline = 0;
+    this.lastOpcode4SentMs = 0;
+  }
+
+  isCooldownActive() {
+    return Date.now() < this.cooldownUntil;
+  }
+
+  getRemainingCooldownSec() {
+    return Math.max(0, Math.ceil((this.cooldownUntil - Date.now()) / 1000));
+  }
+
+  canAttemptOpcode4(reason = "") {
+    if (this.isCooldownActive()) {
+      Logger.warn("GUARD", `Opcode 4 blocked by active cooldown (${this.getRemainingCooldownSec()}s remaining)`, `reason="${reason}"`);
+      return false;
+    }
+
+    if (this.isJtcMovePending) {
+      if (Date.now() < this.jtcMoveDeadline) {
+        Logger.warn("GUARD", "Opcode 4 blocked: awaiting server JTC bot to move our user into new room", `deadlineIn=${Math.ceil((this.jtcMoveDeadline - Date.now()) / 1000)}s`);
+        return false;
+      } else {
+        // Expired without move
+        this.isJtcMovePending = false;
+        this.triggerCooldown(30, "JTC room creation timed out after 12s without server bot move");
+        return false;
+      }
+    }
+
+    const elapsedSinceLastOp4 = Date.now() - this.lastOpcode4SentMs;
+    if (elapsedSinceLastOp4 < 6000) {
+      Logger.warn("GUARD", `Opcode 4 throttled (minimum 6s interval; elapsed=${elapsedSinceLastOp4}ms)`);
+      return false;
+    }
+
+    return true;
+  }
+
+  recordOpcode4Sent(isJtcLobby = false) {
+    const now = Date.now();
+    this.lastOpcode4SentMs = now;
+    this.recentJoins.push(now);
+
+    // Keep only attempts in last 60 seconds
+    this.recentJoins = this.recentJoins.filter(t => (now - t) < 60000);
+
+    if (isJtcLobby) {
+      this.isJtcMovePending = true;
+      this.jtcMoveDeadline = now + 12000; // 12 seconds maximum wait for JTC move
+    }
+
+    // Circuit breaker check: maximum 2 joins in 60s
+    if (this.recentJoins.length > 2) {
+      this.consecutiveFailures++;
+      const backoffSec = Math.min(300, 30 * Math.pow(2, this.consecutiveFailures - 1));
+      this.triggerCooldown(backoffSec, `Rapid join loop detected (${this.recentJoins.length} joins in <60s). Anti-spam breaker tripped`);
+      return false;
+    }
+
+    return true;
+  }
+
+  notifyJtcMoveComplete(newChannelId, channelName) {
+    this.isJtcMovePending = false;
+    this.jtcMoveDeadline = 0;
+    this.consecutiveFailures = 0;
+    Logger.info("JTC_ENGINE", `Successfully moved into dynamic room: "${channelName}" (${newChannelId})`);
+  }
+
+  triggerCooldown(seconds, reason) {
+    this.isJtcMovePending = false;
+    this.jtcMoveDeadline = 0;
+    this.cooldownUntil = Date.now() + (seconds * 1000);
+
+    if (this.countdownTimer) {
+      clearInterval(this.countdownTimer);
+      this.countdownTimer = null;
+    }
+
+    Logger.warn("COOLDOWN", `Starting protection countdown: ${seconds}s`, `reason="${reason}"`);
+    let remaining = seconds;
+    Logger.countdown(remaining, seconds, reason);
+
+    this.countdownTimer = setInterval(() => {
+      remaining = this.getRemainingCooldownSec();
+      if (remaining <= 0) {
+        clearInterval(this.countdownTimer);
+        this.countdownTimer = null;
+        Logger.info("COOLDOWN", `Cooldown completed. Ready for next safe voice connection.`);
+      } else if (remaining % 5 === 0 || remaining <= 5) {
+        Logger.countdown(remaining, seconds, reason);
+      }
+    }, 1000);
+  }
+
+  reset() {
+    if (this.countdownTimer) {
+      clearInterval(this.countdownTimer);
+      this.countdownTimer = null;
+    }
+    this.cooldownUntil = 0;
+    this.isJtcMovePending = false;
+    this.jtcMoveDeadline = 0;
+    this.recentJoins = [];
+  }
+}
+
+const antiGlitch = new AntiGlitchGuard();
+
+// ============================================================================
+// STATE VARIABLES
+// ============================================================================
 const channelNamesCache = new Map();
 
 let ws = null;
 let myUserId = null;
 let mySessionId = null;
 let isUserActiveOnOtherClient = false;
-let resumeAfkTimer = null;
+let userPcYieldTimer = null;
 let sequence = null;
 let heartbeatTimer = null;
 let syncTimer = null;
 let isConnected = false;
 let lastHeartbeatAck = true;
-let lastJoinInitiatedMs = 0;
-let lastOpcode4SentMs = 0;
 
 let localGuildId = process.env.GUILD_ID || cfg.saved_guild_id || "1442511921898192917";
 let localChannelId = process.env.CHANNEL_ID || cfg.saved_channel_id || DEFAULT_JTC_LOBBY;
 let localActiveChannelId = null;
+let localDynamicChannelId = null; // Sticky JTC-created room
 let localInVoice = false;
 let currentVoiceMute = null;
 let currentVoiceDeaf = null;
@@ -70,26 +225,34 @@ let lastDeaf = null;
 let lastTargetChan = "";
 let lastActivityKey = "";
 
-// 1. Built-in HTTP server to pass cloud health checks (Render, Koyeb, Railway, etc.)
+// ============================================================================
+// BUILT-IN HTTP SERVER (PASS CLOUD HEALTH CHECKS)
+// ============================================================================
 const server = http.createServer((req, res) => {
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(JSON.stringify({
     status: isConnected ? "online" : "connecting",
-    service: "Discord Studio PRO — 24/7 Cloud Voice Engine",
+    service: "Discord Studio PRO — 24/7 Cloud Voice Engine (Node 22 Modern)",
+    instance_id: daemonInstanceId,
     connected_to_discord: isConnected,
     user_id: myUserId,
     in_voice: localInVoice,
     active_channel: localActiveChannelId || localChannelId,
+    dynamic_channel: localDynamicChannelId,
     user_active_on_pc: isUserActiveOnOtherClient,
+    cooldown_remaining_sec: antiGlitch.getRemainingCooldownSec(),
     guild_id: localGuildId,
     uptime_seconds: Math.floor(process.uptime())
   }));
 });
 
 server.listen(PORT, () => {
-  console.log(`[VoiceDaemon] 🌐 Cloud Health check HTTP server running on port ${PORT}`);
+  Logger.info("HTTP_HEALTH", `Cloud Health check HTTP server running on port ${PORT}`);
 });
 
+// ============================================================================
+// ACTIVITY APP REGISTRY
+// ============================================================================
 const APP_REGISTRY = {
   aftereffects: { id: "748568089939148832", name: "Adobe After Effects" },
   photoshop: { id: "748586506888806460", name: "Adobe Photoshop" },
@@ -102,6 +265,12 @@ const APP_REGISTRY = {
   fortnite: { id: "432980957394370572", name: "Fortnite" },
   roblox: { id: "363445589247131668", name: "Roblox" },
   genshin: { id: "762434991303950386", name: "Genshin Impact" },
+  oncehuman: { id: "1260340082150346932", name: "Once Human" },
+  fc27: { id: "1531874756096295054", name: "EA SPORTS FC™ 27" },
+  marvelrivals: { id: "1314395942253756416", name: "Marvel Rivals" },
+  deltaforce: { id: "1314682894106497096", name: "Delta Force" },
+  ror2: { id: "1402418087793528862", name: "Risk of Rain 2" },
+  wherewindsmeet: { id: "1437509662303059998", name: "Where Winds Meet" },
   nte: { id: "1470616226995765409", name: "Neverness to Everness" },
   giants: { id: "1428223713928810496", name: "March of Giants" },
   hellraiser: { id: "1552168352116641822", name: "Clive Barker's Hellraiser: Revival" },
@@ -130,7 +299,8 @@ async function resolveChannelName(chanId) {
   }
   try {
     const r = await fetch(`https://discord.com/api/v10/channels/${sId}`, {
-      headers: { Authorization: TOKEN, "User-Agent": "Mozilla/5.0" }
+      headers: { Authorization: TOKEN, "User-Agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(4000)
     });
     if (r.ok) {
       const d = await r.json();
@@ -149,7 +319,8 @@ async function verifyChannelExists(chanId) {
   if (sId === DEFAULT_JTC_LOBBY) return true;
   try {
     const r = await fetch(`https://discord.com/api/v10/channels/${sId}`, {
-      headers: { Authorization: TOKEN, "User-Agent": "Mozilla/5.0" }
+      headers: { Authorization: TOKEN, "User-Agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(4000)
     });
     return r.ok;
   } catch (e) {
@@ -164,71 +335,38 @@ function resolveAppInfo(act) {
   const rawLargeText = String(act.large_text || "").toLowerCase().trim();
   const combined = `${rawName} ${rawLargeText}`.trim();
 
-  // 0. Direct match by preset key if present
   if (rawKey && APP_REGISTRY[rawKey]) {
     return APP_REGISTRY[rawKey];
   }
 
-  // 1. Keyword matching on name or large_text first (prioritizes user-selected title over stale ID)
-  if (combined.includes("grand theft auto") || combined.includes("gta 6") || combined.includes("gta vi")) {
-    return APP_REGISTRY.gta6;
-  }
-  if (combined.includes("visual studio code") || combined.includes("vscode")) {
-    return APP_REGISTRY.vscode;
-  }
-  if (combined.includes("photoshop") || combined.includes("phxs")) {
-    return APP_REGISTRY.photoshop;
-  }
-  if (combined.includes("after effect") || combined.includes("afterfx") || combined.includes("aeft")) {
-    return APP_REGISTRY.aftereffects;
-  }
-  if (combined.includes("premiere") || combined.includes("ppro")) {
-    return APP_REGISTRY.premiere;
-  }
-  if (combined.includes("figma")) {
-    return APP_REGISTRY.figma;
-  }
-  if (combined.includes("valorant")) {
-    return APP_REGISTRY.valorant;
-  }
-  if (combined.includes("fortnite")) {
-    return APP_REGISTRY.fortnite;
-  }
-  if (combined.includes("roblox")) {
-    return APP_REGISTRY.roblox;
-  }
-  if (combined.includes("genshin")) {
-    return APP_REGISTRY.genshin;
-  }
-  if (combined.includes("neverness") || combined.includes("nte")) {
-    return APP_REGISTRY.nte;
-  }
-  if (combined.includes("giants") || combined.includes("march of")) {
-    return APP_REGISTRY.giants;
-  }
-  if (combined.includes("hellraiser")) {
-    return APP_REGISTRY.hellraiser;
-  }
-  if (combined.includes("helldivers")) {
-    return APP_REGISTRY.helldivers2;
-  }
-  if (combined.includes("cyberpunk")) {
-    return APP_REGISTRY.cyberpunk;
-  }
-  if (combined.includes("illustrator") || combined.includes("ilst")) {
-    return APP_REGISTRY.illustrator;
-  }
+  if (combined.includes("once human")) return APP_REGISTRY.oncehuman;
+  if (combined.includes("fc 27") || combined.includes("fc27") || combined.includes("ea sports fc")) return APP_REGISTRY.fc27;
+  if (combined.includes("marvel rivals") || combined.includes("marvel")) return APP_REGISTRY.marvelrivals;
+  if (combined.includes("delta force")) return APP_REGISTRY.deltaforce;
+  if (combined.includes("risk of rain")) return APP_REGISTRY.ror2;
+  if (combined.includes("grand theft auto") || combined.includes("gta 6") || combined.includes("gta vi")) return APP_REGISTRY.gta6;
+  if (combined.includes("visual studio code") || combined.includes("vscode")) return APP_REGISTRY.vscode;
+  if (combined.includes("photoshop") || combined.includes("phxs")) return APP_REGISTRY.photoshop;
+  if (combined.includes("after effect") || combined.includes("afterfx") || combined.includes("aeft")) return APP_REGISTRY.aftereffects;
+  if (combined.includes("premiere") || combined.includes("ppro")) return APP_REGISTRY.premiere;
+  if (combined.includes("figma")) return APP_REGISTRY.figma;
+  if (combined.includes("valorant")) return APP_REGISTRY.valorant;
+  if (combined.includes("fortnite")) return APP_REGISTRY.fortnite;
+  if (combined.includes("roblox")) return APP_REGISTRY.roblox;
+  if (combined.includes("genshin")) return APP_REGISTRY.genshin;
+  if (combined.includes("neverness") || combined.includes("nte")) return APP_REGISTRY.nte;
+  if (combined.includes("giants") || combined.includes("march of")) return APP_REGISTRY.giants;
+  if (combined.includes("hellraiser")) return APP_REGISTRY.hellraiser;
+  if (combined.includes("helldivers")) return APP_REGISTRY.helldivers2;
+  if (combined.includes("cyberpunk")) return APP_REGISTRY.cyberpunk;
+  if (combined.includes("illustrator") || combined.includes("ilst")) return APP_REGISTRY.illustrator;
 
-  // 2. Direct match by official application ID if present
   if (givenAppId) {
     for (const app of Object.values(APP_REGISTRY)) {
-      if (app.id === givenAppId) {
-        return app;
-      }
+      if (app.id === givenAppId) return app;
     }
   }
 
-  // 3. Fallback to custom
   return {
     id: givenAppId,
     name: act.name || act.large_text || "Custom Activity"
@@ -283,22 +421,25 @@ function buildPresence(act, startMs) {
   };
 }
 
+// ============================================================================
+// CLOUD SYNC & LEADER CONTROL
+// ============================================================================
 async function syncWithCloudWorker() {
   if (!isConnected || !ws || ws.readyState !== 1) return;
+
   try {
     const r = await fetch(`${WORKER_URL}/health`, {
-      headers: { "User-Agent": "Mozilla/5.0" }
+      headers: { "User-Agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(4000)
     });
     if (!r.ok) return;
     const remote = await r.json();
 
-    // 0. Leader Lock Check: If another runner took over leadership, gracefully exit this older runner
+    // 0. Leader Lock Check
     if (remote.leader_instance_id && remote.leader_instance_id !== daemonInstanceId) {
-      console.log(`[VoiceDaemon] 🛑 Newer 24/7 runner (${remote.leader_instance_id}) active. Gracefully yielding.`);
+      Logger.info("LEADER_LOCK", `Newer 24/7 runner (${remote.leader_instance_id}) active. Gracefully yielding.`);
       if (ws && ws.readyState === 1) {
-        try {
-          ws.close(1000, "Superseded by newer runner");
-        } catch (e) {}
+        try { ws.close(1000, "Superseded by newer runner"); } catch (e) {}
       }
       process.exit(0);
     }
@@ -308,42 +449,91 @@ async function syncWithCloudWorker() {
       localGuildId = remote.guild_id;
     }
 
-    // 2. Sync Voice Room State
+    // 2. Sync Voice State
     const shouldBeInVoice = remote.in_voice !== false;
     let targetChan = remote.requested_channel_id || localChannelId || DEFAULT_JTC_LOBBY;
     desiredDeaf = remote.self_deaf !== undefined ? Boolean(remote.self_deaf) : true;
     desiredMute = remote.self_mute !== undefined ? Boolean(remote.self_mute) : true;
 
-    // If the dashboard requested a new channel, force join regardless of previous yield
-    if (remote.requested_channel_id && remote.requested_channel_id !== lastTargetChan && shouldBeInVoice) {
-      console.log(`[VoiceDaemon] 🎯 Dashboard requested new channel ${remote.requested_channel_id} (clearing any PC yield lock)`);
-      isUserActiveOnOtherClient = false;
-      localInVoice = false;
-      targetChan = remote.requested_channel_id;
-    }
-
-    // If we are NOT in voice at all, user is not active in voice on PC either!
-    if (!localInVoice && shouldBeInVoice) {
-      isUserActiveOnOtherClient = false;
-    }
-
+    // Check if user actively joined voice on another client (PC / mobile)
     if (isUserActiveOnOtherClient) {
-      // User is actively in voice on PC / mobile! DO NOT touch voice or send Opcode 4!
       return;
-    } else if (shouldBeInVoice) {
-      if (!localInVoice) {
-        // Verify channel exists before joining (prevent joining deleted dynamic room)
-        const exists = await verifyChannelExists(targetChan);
-        if (!exists) {
-          console.log(`[VoiceDaemon] ⚠️ Target channel ${targetChan} was deleted. Falling back to lobby: ${DEFAULT_JTC_LOBBY}`);
-          targetChan = DEFAULT_JTC_LOBBY;
-          localChannelId = targetChan;
-          lastTargetChan = targetChan;
+    }
+
+    if (shouldBeInVoice) {
+      // Are we already in a voice channel?
+      if (localInVoice && localActiveChannelId) {
+        // If we are in a dynamic channel created by the JTC lobby, and the dashboard requested the lobby,
+        // WE ARE ALREADY IN ITS GENERATED ROOM! DO NOT RE-JOIN THE LOBBY!
+        const isCurrentlyInGeneratedRoom = (
+          localDynamicChannelId &&
+          localActiveChannelId === localDynamicChannelId &&
+          targetChan === DEFAULT_JTC_LOBBY
+        );
+
+        if (isCurrentlyInGeneratedRoom) {
+          // Check mute/deaf state enforcement only
+          const needsAudioUpdate = (desiredMute !== lastMute || desiredDeaf !== lastDeaf);
+          if (needsAudioUpdate && antiGlitch.canAttemptOpcode4("audio_state_enforce")) {
+            Logger.info("VOICE", `Enforcing audio state in dynamic room: Mute=${desiredMute}, Deaf=${desiredDeaf}`);
+            antiGlitch.recordOpcode4Sent(false);
+            ws.send(JSON.stringify({
+              op: 4,
+              d: {
+                guild_id: String(localGuildId),
+                channel_id: String(localActiveChannelId),
+                self_mute: desiredMute,
+                self_deaf: desiredDeaf
+              }
+            }));
+            lastMute = desiredMute;
+            lastDeaf = desiredDeaf;
+          }
+          return;
         }
 
-        console.log(`[VoiceDaemon] 🔊 Connecting to Voice Room: ${targetChan} (guild: ${localGuildId}) [mute=${desiredMute}, deaf=${desiredDeaf}]`);
-        lastJoinInitiatedMs = Date.now();
-        lastOpcode4SentMs = Date.now();
+        // Only switch if the dashboard requested an explicitly DIFFERENT specific channel
+        const requestedDifferentSpecificChannel = (
+          remote.requested_channel_id &&
+          remote.requested_channel_id !== localActiveChannelId &&
+          remote.requested_channel_id !== DEFAULT_JTC_LOBBY
+        );
+
+        if (requestedDifferentSpecificChannel) {
+          if (antiGlitch.canAttemptOpcode4("switch_specific_channel")) {
+            Logger.info("VOICE", `Switching to dashboard requested channel: ${remote.requested_channel_id}`);
+            antiGlitch.recordOpcode4Sent(false);
+            ws.send(JSON.stringify({
+              op: 4,
+              d: {
+                guild_id: String(localGuildId),
+                channel_id: String(remote.requested_channel_id),
+                self_mute: desiredMute,
+                self_deaf: desiredDeaf
+              }
+            }));
+            localChannelId = remote.requested_channel_id;
+            lastTargetChan = remote.requested_channel_id;
+            lastMute = desiredMute;
+            lastDeaf = desiredDeaf;
+          }
+        }
+      } else {
+        // We are NOT currently in voice. Check if we can safely initiate join
+        if (!antiGlitch.canAttemptOpcode4("join_voice_initial")) {
+          return;
+        }
+
+        const isJoiningLobby = (targetChan === DEFAULT_JTC_LOBBY);
+        const exists = await verifyChannelExists(targetChan);
+        if (!exists) {
+          Logger.warn("VOICE", `Target channel ${targetChan} does not exist. Falling back to lobby: ${DEFAULT_JTC_LOBBY}`);
+          targetChan = DEFAULT_JTC_LOBBY;
+          localChannelId = targetChan;
+        }
+
+        Logger.info("VOICE", `Connecting to Voice Channel: ${targetChan} (Guild: ${localGuildId}) [mute=${desiredMute}, deaf=${desiredDeaf}]`);
+        antiGlitch.recordOpcode4Sent(isJoiningLobby);
         ws.send(JSON.stringify({
           op: 4,
           d: {
@@ -357,33 +547,12 @@ async function syncWithCloudWorker() {
         lastTargetChan = targetChan;
         lastMute = desiredMute;
         lastDeaf = desiredDeaf;
-      } else {
-        // Already active in voice on daemon session
-        const activeChan = localActiveChannelId || localChannelId;
-        const needsUpdate = (
-          desiredMute !== lastMute ||
-          desiredDeaf !== lastDeaf
-        );
-        if (needsUpdate && (Date.now() - lastOpcode4SentMs) > 6000) {
-          console.log(`[VoiceDaemon] 🎙️ Enforcing Voice State in ${activeChan}: Mute=${desiredMute}, Deaf=${desiredDeaf}`);
-          lastOpcode4SentMs = Date.now();
-          ws.send(JSON.stringify({
-            op: 4,
-            d: {
-              guild_id: String(localGuildId),
-              channel_id: String(activeChan),
-              self_mute: desiredMute,
-              self_deaf: desiredDeaf
-            }
-          }));
-          lastMute = desiredMute;
-          lastDeaf = desiredDeaf;
-        }
       }
     } else {
-      if (localInVoice) {
-        console.log("[VoiceDaemon] ⚪ Cloud requested Leave Voice Room");
-        lastOpcode4SentMs = Date.now();
+      // Cloud requested Leave Voice Room
+      if (localInVoice && antiGlitch.canAttemptOpcode4("leave_voice")) {
+        Logger.info("VOICE", "Cloud requested Leave Voice Room");
+        antiGlitch.recordOpcode4Sent(false);
         ws.send(JSON.stringify({
           op: 4,
           d: {
@@ -395,6 +564,7 @@ async function syncWithCloudWorker() {
         }));
         localInVoice = false;
         localActiveChannelId = null;
+        localDynamicChannelId = null;
         lastTargetChan = "";
         lastMute = null;
         lastDeaf = null;
@@ -409,7 +579,7 @@ async function syncWithCloudWorker() {
       : "CLEARED_ACTIVITY";
 
     if (actKey !== lastActivityKey) {
-      console.log(`[VoiceDaemon] ✨ Cloud requested Activity: ${isValid ? `"${act.name || act.large_text}" - "${act.details || ''}"` : "⚪ REMOVED / CLEARED"}`);
+      Logger.info("ACTIVITY", `Updating presence: ${isValid ? `"${act.name || act.large_text}"` : "CLEARED"}`);
       const presencePayload = buildPresence(isValid ? act : null, remote.startTimestampMs);
       ws.send(JSON.stringify({
         op: 3,
@@ -418,7 +588,7 @@ async function syncWithCloudWorker() {
       lastActivityKey = actKey;
     }
   } catch (err) {
-    // transient fetch error
+    // Transient sync network error
   }
 }
 
@@ -438,19 +608,22 @@ async function reportTelemetryToCloud(activeChan, inVoice, chanName = "", regist
     await fetch(`${WORKER_URL}/api/telemetry`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(4000)
     });
   } catch (e) {}
 }
 
+// ============================================================================
+// GATEWAY WEBSOCKET CONTROLLER
+// ============================================================================
 function connectGateway() {
   if (!TOKEN) {
-    console.error("[VoiceDaemon] ❌ Error: No DISCORD_TOKEN provided. Please set DISCORD_TOKEN environment variable.");
+    Logger.error("AUTH", "No DISCORD_TOKEN provided. Please set DISCORD_TOKEN in GitHub Secrets.");
     return;
   }
 
-  console.log(`[VoiceDaemon] 🔑 Token check: starts with "${TOKEN.slice(0, 6)}...", total length: ${TOKEN.length}`);
-  console.log("[VoiceDaemon] 🚀 Connecting to Discord Gateway...");
+  Logger.info("GATEWAY", `Connecting to Discord Gateway (v=10, token: ${TOKEN.slice(0, 6)}...${TOKEN.slice(-4)})`);
   ws = new WebSocket("wss://gateway.discord.gg/?v=10&encoding=json");
 
   ws.addEventListener("message", async (event) => {
@@ -458,13 +631,14 @@ function connectGateway() {
       const data = JSON.parse(typeof event.data === "string" ? event.data : event.data.toString());
       if (data.s !== null && data.s !== undefined) sequence = data.s;
 
+      // OP 10: Hello
       if (data.op === 10) {
         const interval = data.d?.heartbeat_interval || 41250;
         lastHeartbeatAck = true;
         if (heartbeatTimer) clearInterval(heartbeatTimer);
         heartbeatTimer = setInterval(() => {
           if (!lastHeartbeatAck) {
-            console.log("[VoiceDaemon] ⚠️ Heartbeat ACK missed! Connection is zombie/stuck. Forcing reconnect...");
+            Logger.warn("HEARTBEAT", "Heartbeat ACK missed! Connection is unresponsive. Forcing reconnect...");
             try { ws.close(4000, "Heartbeat ACK timeout"); } catch (e) {}
             return;
           }
@@ -472,6 +646,7 @@ function connectGateway() {
           try { ws.send(JSON.stringify({ op: 1, d: sequence })); } catch (e) {}
         }, interval);
 
+        // Identify
         ws.send(JSON.stringify({
           op: 2,
           d: {
@@ -479,185 +654,194 @@ function connectGateway() {
             properties: { os: "Windows", browser: "Chrome", device: "" }
           }
         }));
-      } else if (data.op === 11) {
+      }
+
+      // OP 11: Heartbeat ACK
+      else if (data.op === 11) {
         lastHeartbeatAck = true;
-      } else if (data.op === 0 && data.t === "READY") {
-        myUserId = String(data.d?.user?.id || "");
-        mySessionId = String(data.d?.session_id || "");
-        isConnected = true;
-        console.log(`[VoiceDaemon] 🎉 Logged in as ${data.d?.user?.username} (${myUserId}) [session: ${mySessionId}]`);
+      }
 
-        // Cache channels from all guilds
-        cacheGuildChannels(data.d?.guilds);
+      // OP 0: Dispatch
+      else if (data.op === 0) {
+        // READY Event
+        if (data.t === "READY") {
+          myUserId = String(data.d?.user?.id || "");
+          mySessionId = String(data.d?.session_id || "");
+          isConnected = true;
+          Logger.info("AUTH", `Logged in as ${data.d?.user?.username} (ID: ${myUserId}) | Session: ${mySessionId}`);
 
-        // Check if user account is ALREADY connected to voice in ANY guild
-        if (Array.isArray(data.d?.guilds)) {
-          for (const g of data.d.guilds) {
-            if (Array.isArray(g.voice_states)) {
-              const myState = g.voice_states.find(vs => String(vs.user_id) === String(myUserId));
-              if (myState && myState.channel_id) {
-                localActiveChannelId = String(myState.channel_id);
-                localInVoice = true;
-                localGuildId = String(g.id);
-                lastTargetChan = localActiveChannelId;
-                currentVoiceMute = Boolean(myState.self_mute);
-                currentVoiceDeaf = Boolean(myState.self_deaf);
-                const stateSession = String(myState.session_id || "");
-                const cName = await resolveChannelName(localActiveChannelId);
+          cacheGuildChannels(data.d?.guilds);
 
-                isUserActiveOnOtherClient = false;
-                console.log(`[VoiceDaemon] 🛡️ Resumed active voice session in room "${cName}" (${localActiveChannelId}) [session: ${stateSession}].`);
-                reportTelemetryToCloud(localActiveChannelId, true, cName);
-                break;
-              }
-            }
-          }
-        }
+          // Check if already in voice
+          if (Array.isArray(data.d?.guilds)) {
+            for (const g of data.d.guilds) {
+              if (Array.isArray(g.voice_states)) {
+                const myState = g.voice_states.find(vs => String(vs.user_id) === String(myUserId));
+                if (myState && myState.channel_id) {
+                  localActiveChannelId = String(myState.channel_id);
+                  localInVoice = true;
+                  localGuildId = String(g.id);
+                  currentVoiceMute = Boolean(myState.self_mute);
+                  currentVoiceDeaf = Boolean(myState.self_deaf);
+                  const cName = await resolveChannelName(localActiveChannelId);
 
-        // Start 2.5s Cloud Dashboard Sync Loop
-        if (syncTimer) clearInterval(syncTimer);
-        syncTimer = setInterval(syncWithCloudWorker, 2500);
-
-        // Register this runner as the active leader in cloud telemetry
-        reportTelemetryToCloud(localActiveChannelId, localInVoice, "", true);
-
-        // Immediate first sync with Cloudflare worker
-        setTimeout(syncWithCloudWorker, 300);
-      } else if (data.op === 0 && (data.t === "CHANNEL_CREATE" || data.t === "CHANNEL_UPDATE")) {
-        if (data.d?.id && data.d?.name) {
-          channelNamesCache.set(String(data.d.id), String(data.d.name));
-        }
-      } else if (data.op === 0 && data.t === "GUILD_CREATE") {
-        cacheGuildChannels([data.d]);
-      } else if (data.op === 0 && data.t === "VOICE_STATE_UPDATE") {
-        if (String(data.d?.user_id) === myUserId) {
-          const eventSessionId = String(data.d?.session_id || "");
-          const timeSinceDaemonJoin = Date.now() - lastJoinInitiatedMs;
-          const justJoinedByDaemon = timeSinceDaemonJoin < 10000;
-
-          if (data.d?.channel_id) {
-            localActiveChannelId = String(data.d.channel_id);
-            localInVoice = true;
-            localChannelId = localActiveChannelId;
-            currentVoiceMute = Boolean(data.d.self_mute);
-            currentVoiceDeaf = Boolean(data.d.self_deaf);
-            const cName = await resolveChannelName(localActiveChannelId);
-
-            if (justJoinedByDaemon) {
-              // This is the daemon's own join or the server's JTC bot moving us into our room!
-              isUserActiveOnOtherClient = false;
-              if (resumeAfkTimer) {
-                clearTimeout(resumeAfkTimer);
-                resumeAfkTimer = null;
-              }
-              console.log(`[VoiceDaemon] ✅ Daemon Active in Voice Room: "${cName}" (${localActiveChannelId}) [mute=${currentVoiceMute}, deaf=${currentVoiceDeaf}]`);
-              reportTelemetryToCloud(localActiveChannelId, true, cName);
-              return;
-            }
-
-            const isOtherClient = Boolean(mySessionId && eventSessionId && eventSessionId !== mySessionId);
-            if (isOtherClient) {
-              // The user actively joined or moved voice from PC / Mobile! DO NOT SEND OPCODE 4! DO NOT DISCONNECT THEM!
-              isUserActiveOnOtherClient = true;
-              if (resumeAfkTimer) {
-                clearTimeout(resumeAfkTimer);
-                resumeAfkTimer = null;
-              }
-              console.log(`[VoiceDaemon] 👤 User active in voice on PC/Mobile (room: "${cName}" - ${localActiveChannelId}, session: ${eventSessionId}). Yielding voice control.`);
-              reportTelemetryToCloud(localActiveChannelId, true, cName);
-              return;
-            }
-
-            if (isUserActiveOnOtherClient) {
-              // Routine event while user is on PC - keep yielding!
-              reportTelemetryToCloud(localActiveChannelId, true, cName);
-              return;
-            }
-
-            // Normal voice state update on our session
-            console.log(`[VoiceDaemon] ✅ Voice State in Room: "${cName}" (${localActiveChannelId}) [mute=${currentVoiceMute}, deaf=${currentVoiceDeaf}]`);
-            reportTelemetryToCloud(localActiveChannelId, true, cName);
-          } else {
-            console.log(`[VoiceDaemon] ⚠️ Disconnected from voice channel (session: ${eventSessionId}, wasOnOtherDevice: ${isUserActiveOnOtherClient})`);
-            localActiveChannelId = null;
-            localInVoice = false;
-            currentVoiceMute = null;
-            currentVoiceDeaf = null;
-            lastMute = null;
-            lastDeaf = null;
-            reportTelemetryToCloud(null, false, "");
-
-            if (resumeAfkTimer) clearTimeout(resumeAfkTimer);
-            resumeAfkTimer = setTimeout(async () => {
-              isUserActiveOnOtherClient = false;
-              resumeAfkTimer = null;
-              console.log(`[VoiceDaemon] 🔄 Auto-resuming 24/7 AFK mode...`);
-
-              let target = localChannelId || DEFAULT_JTC_LOBBY;
-              const exists = await verifyChannelExists(target);
-              if (!exists) {
-                console.log(`[VoiceDaemon] ⚠️ Previous channel ${target} was deleted. Falling back to lobby: ${DEFAULT_JTC_LOBBY}`);
-                target = DEFAULT_JTC_LOBBY;
-                localChannelId = target;
-              }
-
-              if (isConnected && ws && ws.readyState === 1) {
-                lastJoinInitiatedMs = Date.now();
-                lastOpcode4SentMs = Date.now();
-                ws.send(JSON.stringify({
-                  op: 4,
-                  d: {
-                    guild_id: String(localGuildId),
-                    channel_id: String(target),
-                    self_mute: desiredMute,
-                    self_deaf: desiredDeaf
+                  if (localActiveChannelId !== DEFAULT_JTC_LOBBY) {
+                    localDynamicChannelId = localActiveChannelId;
                   }
-                }));
-                lastTargetChan = target;
-                lastMute = desiredMute;
-                lastDeaf = desiredDeaf;
+
+                  Logger.info("VOICE", `Resumed active voice session in "${cName}" (${localActiveChannelId})`);
+                  reportTelemetryToCloud(localActiveChannelId, true, cName);
+                  break;
+                }
               }
-            }, 4000);
+            }
+          }
+
+          // Start 2.5s Cloud Dashboard Sync Loop
+          if (syncTimer) clearInterval(syncTimer);
+          syncTimer = setInterval(syncWithCloudWorker, 2500);
+
+          // Register this runner as the active leader
+          reportTelemetryToCloud(localActiveChannelId, localInVoice, "", true);
+
+          // Trigger immediate first sync
+          setTimeout(syncWithCloudWorker, 500);
+        }
+
+        // Channel updates
+        else if (data.t === "CHANNEL_CREATE" || data.t === "CHANNEL_UPDATE") {
+          if (data.d?.id && data.d?.name) {
+            channelNamesCache.set(String(data.d.id), String(data.d.name));
+          }
+        } else if (data.t === "GUILD_CREATE") {
+          cacheGuildChannels([data.d]);
+        }
+
+        // VOICE_STATE_UPDATE
+        else if (data.t === "VOICE_STATE_UPDATE") {
+          if (String(data.d?.user_id) === myUserId) {
+            const eventSessionId = String(data.d?.session_id || "");
+            const newChannelId = data.d?.channel_id ? String(data.d.channel_id) : null;
+
+            // Scenario 1: User joined or moved to a voice channel
+            if (newChannelId) {
+              const cName = await resolveChannelName(newChannelId);
+              localActiveChannelId = newChannelId;
+              localInVoice = true;
+              currentVoiceMute = Boolean(data.d.self_mute);
+              currentVoiceDeaf = Boolean(data.d.self_deaf);
+
+              // Did another client (PC / Mobile) join or move voice?
+              const isOtherClient = Boolean(mySessionId && eventSessionId && eventSessionId !== mySessionId);
+              if (isOtherClient) {
+                isUserActiveOnOtherClient = true;
+                if (userPcYieldTimer) {
+                  clearTimeout(userPcYieldTimer);
+                  userPcYieldTimer = null;
+                }
+                Logger.info("YIELD", `User active on PC/Mobile in room "${cName}" (${newChannelId}). Daemon yielding voice control.`);
+                reportTelemetryToCloud(newChannelId, true, cName);
+                return;
+              }
+
+              // Check if server JTC bot moved us from lobby into dynamic room
+              if (antiGlitch.isJtcMovePending && newChannelId !== DEFAULT_JTC_LOBBY) {
+                localDynamicChannelId = newChannelId;
+                antiGlitch.notifyJtcMoveComplete(newChannelId, cName);
+                reportTelemetryToCloud(newChannelId, true, cName);
+                return;
+              }
+
+              if (newChannelId === DEFAULT_JTC_LOBBY) {
+                Logger.info("JTC_ENGINE", `In Join-to-Create lobby (${newChannelId}). Awaiting dynamic room creation by server bot...`);
+              } else {
+                localDynamicChannelId = newChannelId;
+                Logger.info("VOICE", `Active in room: "${cName}" (${newChannelId}) [mute=${currentVoiceMute}, deaf=${currentVoiceDeaf}]`);
+              }
+              reportTelemetryToCloud(newChannelId, true, cName);
+            }
+
+            // Scenario 2: Disconnected from voice
+            else {
+              const wasDynamicRoom = Boolean(localDynamicChannelId);
+              const wasAwaitingJtc = antiGlitch.isJtcMovePending;
+              Logger.warn("VOICE", `Disconnected from voice channel (wasInRoom: ${localActiveChannelId || 'none'}, awaitingJTC: ${wasAwaitingJtc})`);
+
+              localActiveChannelId = null;
+              localDynamicChannelId = null;
+              localInVoice = false;
+              currentVoiceMute = null;
+              currentVoiceDeaf = null;
+              lastMute = null;
+              lastDeaf = null;
+              reportTelemetryToCloud(null, false, "");
+
+              // If user was on PC and left voice, give a 15-second grace countdown before resuming AFK
+              if (isUserActiveOnOtherClient) {
+                if (userPcYieldTimer) clearTimeout(userPcYieldTimer);
+                antiGlitch.triggerCooldown(15, "User left voice on PC/Mobile. Grace countdown before AFK resume");
+                userPcYieldTimer = setTimeout(() => {
+                  isUserActiveOnOtherClient = false;
+                  userPcYieldTimer = null;
+                  Logger.info("YIELD", "PC/Mobile grace period ended. Ready to resume 24/7 AFK mode.");
+                }, 15000);
+                return;
+              }
+
+              // If room creation failed or disconnected immediately during JTC creation:
+              if (wasAwaitingJtc || wasDynamicRoom) {
+                antiGlitch.triggerCooldown(30, "Room disconnected/deleted. Circuit breaker cooling down to strictly prevent channel creation loops");
+              } else {
+                antiGlitch.triggerCooldown(15, "Voice disconnected. Cooldown backoff before safe reconnect");
+              }
+            }
           }
         }
-      } else if (data.op === 1) {
+      }
+
+      // OP 1: Heartbeat
+      else if (data.op === 1) {
         ws.send(JSON.stringify({ op: 1, d: sequence }));
-      } else if (data.op === 7 || data.op === 9) {
+      }
+
+      // OP 7 (Reconnect) or OP 9 (Invalid Session)
+      else if (data.op === 7 || data.op === 9) {
+        Logger.warn("GATEWAY", `Received OP ${data.op}. Reconnecting WebSocket session...`);
         try { ws.close(); } catch (e) {}
       }
-    } catch (e) {}
+    } catch (e) {
+      Logger.error("EVENT_PARSE", `Failed processing event: ${e.message}`);
+    }
   });
 
   ws.addEventListener("close", (e) => {
     isConnected = false;
     localInVoice = false;
     localActiveChannelId = null;
+    localDynamicChannelId = null;
     currentVoiceMute = null;
     currentVoiceDeaf = null;
     isUserActiveOnOtherClient = false;
     lastHeartbeatAck = true;
-    if (resumeAfkTimer) {
-      clearTimeout(resumeAfkTimer);
-      resumeAfkTimer = null;
+
+    if (userPcYieldTimer) {
+      clearTimeout(userPcYieldTimer);
+      userPcYieldTimer = null;
     }
-    lastTargetChan = "";
-    lastMute = null;
-    lastDeaf = null;
-    lastActivityKey = "";
     if (heartbeatTimer) clearInterval(heartbeatTimer);
     if (syncTimer) clearInterval(syncTimer);
+
     if (e.code === 4004) {
-      console.error(`[VoiceDaemon] ❌ Authentication Failed (code: 4004)! The token was rejected by Discord.`);
-      console.error(`[VoiceDaemon] Token length: ${TOKEN.length}, preview: ${TOKEN.slice(0, 6)}...${TOKEN.slice(-4)}`);
-      console.error(`[VoiceDaemon] Please ensure DISCORD_TOKEN in GitHub Secrets contains the exact token without extra quotes or spaces.`);
+      Logger.error("AUTH", "Authentication Failed (code: 4004)! The token was rejected by Discord.");
       process.exit(1);
     }
-    console.log(`[VoiceDaemon] Gateway closed (code: ${e.code}). Reconnecting in 4s...`);
-    setTimeout(connectGateway, 4000);
+
+    Logger.warn("GATEWAY", `Gateway closed (code: ${e.code}). Reconnecting in 6s...`);
+    setTimeout(connectGateway, 6000);
   });
 
   ws.addEventListener("error", (err) => {
-    console.log(`[VoiceDaemon] WebSocket error: ${err.message || err}`);
+    Logger.error("GATEWAY", `WebSocket connection error: ${err.message || err}`);
     try { ws.close(); } catch (e) {}
   });
 }

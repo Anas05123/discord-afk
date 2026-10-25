@@ -13,7 +13,7 @@ VERIFIED_PRESETS = [
         "large_text": "Grand Theft Auto VI",
         "small_image": "",
         "small_text": "Rockstar Games",
-        "icon": "🌴"
+        "icon": "◈"
     },
     {
         "key": "vscode",
@@ -26,7 +26,7 @@ VERIFIED_PRESETS = [
         "large_text": "Visual Studio Code",
         "small_image": "",
         "small_text": "",
-        "icon": "💻"
+        "icon": "◈"
     },
     {
         "key": "photoshop",
@@ -39,7 +39,7 @@ VERIFIED_PRESETS = [
         "large_text": "Adobe Photoshop 2026",
         "small_image": "https://cdn-icons-png.flaticon.com/512/5968/5968520.png",
         "small_text": "Creative Cloud",
-        "icon": "🎨"
+        "icon": "◈"
     },
     {
         "key": "illustrator",
@@ -52,7 +52,7 @@ VERIFIED_PRESETS = [
         "large_text": "Adobe Illustrator 2026",
         "small_image": "https://cdn-icons-png.flaticon.com/512/5968/5968472.png",
         "small_text": "Vector Engine",
-        "icon": "✒️"
+        "icon": "◈"
     },
     {
         "key": "aftereffects",
@@ -65,7 +65,7 @@ VERIFIED_PRESETS = [
         "large_text": "Adobe After Effects 2026",
         "small_image": "",
         "small_text": "Motion Graphics",
-        "icon": "✨"
+        "icon": "◈"
     },
     {
         "key": "premiere",
@@ -78,7 +78,7 @@ VERIFIED_PRESETS = [
         "large_text": "Adobe Premiere Pro 2026",
         "small_image": "",
         "small_text": "4K 60fps Timeline",
-        "icon": "🎬"
+        "icon": "◈"
     },
     {
         "key": "figma",
@@ -91,7 +91,7 @@ VERIFIED_PRESETS = [
         "large_text": "Figma UI/UX",
         "small_image": "",
         "small_text": "UI/UX Studio",
-        "icon": "📐"
+        "icon": "◈"
     },
     {
         "key": "valorant",
@@ -104,7 +104,7 @@ VERIFIED_PRESETS = [
         "large_text": "VALORANT",
         "small_image": "https://cdn-icons-png.flaticon.com/512/1055/1055672.png",
         "small_text": "Match Point",
-        "icon": "🎯"
+        "icon": "◈"
     },
     {
         "key": "fortnite",
@@ -117,7 +117,7 @@ VERIFIED_PRESETS = [
         "large_text": "Fortnite",
         "small_image": "https://cdn-icons-png.flaticon.com/512/1828/1828884.png",
         "small_text": "1st Place",
-        "icon": "🪂"
+        "icon": "◈"
     },
     {
         "key": "roblox",
@@ -130,7 +130,7 @@ VERIFIED_PRESETS = [
         "large_text": "ROBLOX",
         "small_image": "https://cdn-icons-png.flaticon.com/512/727/727245.png",
         "small_text": "Online",
-        "icon": "🧱"
+        "icon": "◈"
     },
     {
         "key": "genshin",
@@ -143,7 +143,7 @@ VERIFIED_PRESETS = [
         "large_text": "Genshin Impact",
         "small_image": "https://cdn-icons-png.flaticon.com/512/2997/2997295.png",
         "small_text": "Adventure Rank 60",
-        "icon": "⚔️"
+        "icon": "◈"
     },
     {
         "key": "overwatch",
@@ -156,7 +156,7 @@ VERIFIED_PRESETS = [
         "large_text": "Overwatch",
         "small_image": "https://cdn-icons-png.flaticon.com/512/1055/1055672.png",
         "small_text": "Competitive",
-        "icon": "🛡️"
+        "icon": "◈"
     },
     {
         "key": "chill",
@@ -169,7 +169,7 @@ VERIFIED_PRESETS = [
         "large_text": "Lo-Fi Coffee",
         "small_image": "https://cdn-icons-png.flaticon.com/512/727/727245.png",
         "small_text": "Chill Session",
-        "icon": "☕"
+        "icon": "◈"
     },
     {
         "key": "studying",
@@ -182,7 +182,7 @@ VERIFIED_PRESETS = [
         "large_text": "Deep Study",
         "small_image": "https://cdn-icons-png.flaticon.com/512/2997/2997295.png",
         "small_text": "Pomodoro Focus",
-        "icon": "📚"
+        "icon": "◈"
     }
 ]
 
@@ -519,7 +519,7 @@ class GamesDatabase:
                 "name": "Custom Game",
                 "exe": "game.exe",
                 "category": "Custom",
-                "icon": "🎮"
+                "icon": "◈"
             }
 
         # 1. Check known quest executables and names first
@@ -540,6 +540,6 @@ class GamesDatabase:
             "name": game_title,
             "exe": clean_exe,
             "category": "Custom Game",
-            "icon": "🎮"
+            "icon": "◈"
         }
 

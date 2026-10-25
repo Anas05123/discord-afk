@@ -3,17 +3,17 @@ import time
 import asyncio
 import threading
 import urllib.request
-from typing import Optional, Callable, Dict, Any
+from typing import Optional, Callable, Dict, Any, List
 import websockets
 
 GATEWAY_URL = "wss://gateway.discord.gg/?v=10&encoding=json"
 
 class VoiceAFKClient:
     """
-    In-App Discord Voice Room AFK Engine.
+    In-App Discord Voice Room AFK Engine (Modern Anti-Glitch).
     Runs asynchronously in a background worker thread.
-    Allows user to join and leave voice rooms with self-mute and self-deafen,
-    reporting live status, username, latency, and session uptime back to the GUI.
+    Includes rate-limiting, JTC dynamic room stickiness, and circuit breaker
+    protection to strictly prevent rapid join/leave room creation glitches.
     """
     def __init__(
         self,
@@ -29,6 +29,7 @@ class VoiceAFKClient:
         self.guild_id: str = ""
         self.channel_id: str = ""
         self.active_channel_id: Optional[str] = None
+        self.dynamic_channel_id: Optional[str] = None
         self.user_id: str = ""
         self.self_mute: bool = True
         self.self_deaf: bool = True
@@ -37,6 +38,12 @@ class VoiceAFKClient:
         self.is_connected: bool = False
         self.is_running: bool = False
         self.start_time: float = 0.0
+
+        # Anti-glitch safeguards
+        self.last_opcode4_ms: float = 0.0
+        self.recent_joins: List[float] = []
+        self.cooldown_until: float = 0.0
+        self.is_jtc_pending: bool = False
 
         self._thread: Optional[threading.Thread] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
@@ -74,9 +81,13 @@ class VoiceAFKClient:
         self.guild_id = str(guild_id).strip()
         self.channel_id = str(channel_id).strip()
         self.active_channel_id = None
+        self.dynamic_channel_id = None
         self.self_mute = self_mute
         self.self_deaf = self_deaf
         self.activity_name = activity_name.strip()
+        self.cooldown_until = 0.0
+        self.recent_joins = []
+        self.is_jtc_pending = False
 
         if not self.token or not self.guild_id or not self.channel_id:
             self._notify_status("Error: Token, Server ID, and Channel ID are all required.", False)
@@ -93,6 +104,8 @@ class VoiceAFKClient:
         if self._loop and self._loop.is_running():
             asyncio.run_coroutine_threadsafe(self._cleanup(), self._loop)
         self.is_connected = False
+        self.active_channel_id = None
+        self.dynamic_channel_id = None
         self._notify_status("Disconnected from Voice Channel", False)
 
     def _run_async_thread(self):
@@ -107,7 +120,6 @@ class VoiceAFKClient:
     async def _cleanup(self):
         if self._ws:
             try:
-                # Send voice state update with null channel to cleanly leave
                 leave_payload = {
                     "op": 4,
                     "d": {
@@ -140,13 +152,13 @@ class VoiceAFKClient:
             pass
 
     async def _main_loop(self):
-        backoff = 3
+        backoff = 4
         while self.is_running:
             try:
                 self._notify_status("Connecting to Discord Gateway...", False)
                 async with websockets.connect(GATEWAY_URL, ping_interval=None, max_size=10_000_000) as ws:
                     self._ws = ws
-                    backoff = 3
+                    backoff = 4
 
                     async for message in ws:
                         if not self.is_running:
@@ -181,16 +193,29 @@ class VoiceAFKClient:
                                 user = d.get("user", {})
                                 self.user_id = str(user.get("id", ""))
                                 self._notify_ready(user)
-                                await asyncio.sleep(0.6)
+                                await asyncio.sleep(0.8)
                                 await self._join_voice()
 
                             elif event_type == "VOICE_STATE_UPDATE":
-                                ch_id = d.get("channel_id")
                                 uid = str(d.get("user_id", ""))
-                                if ch_id and ((self.user_id and uid == self.user_id) or str(ch_id) == self.channel_id):
-                                    self.active_channel_id = str(ch_id)
-                                    self.is_connected = True
-                                    self._notify_status(f"Connected in Room: {ch_id}", True)
+                                if self.user_id and uid == self.user_id:
+                                    ch_id = d.get("channel_id")
+                                    if ch_id:
+                                        self.active_channel_id = str(ch_id)
+                                        self.is_connected = True
+                                        self.is_jtc_pending = False
+
+                                        # If this channel is different from original requested lobby, it's our dynamic room!
+                                        if str(ch_id) != self.channel_id:
+                                            self.dynamic_channel_id = str(ch_id)
+
+                                        self._notify_status(f"Active in Voice Room: {ch_id}", True)
+                                    else:
+                                        # Disconnected
+                                        self.is_connected = False
+                                        self.active_channel_id = None
+                                        self.dynamic_channel_id = None
+                                        self._notify_status("Voice disconnected. Circuit breaker cooldown...", False)
 
                         # Opcode 1: Heartbeat requested
                         elif op == 1:
@@ -198,7 +223,7 @@ class VoiceAFKClient:
 
                         # Opcode 7 or 9: Reconnect / Invalid Session
                         elif op in (7, 9):
-                            self._notify_status("Session reset by Discord. Re-identifying...", False)
+                            self._notify_status("Gateway session reset. Reconnecting...", False)
                             await asyncio.sleep(2)
                             break
 
@@ -208,16 +233,20 @@ class VoiceAFKClient:
                     self._notify_status("Authentication failed: Invalid Discord Token!", False)
                     self.is_running = False
                     return
-                self._notify_status(f"Gateway connection dropped: {err_str}", False)
+                self._notify_status(f"Connection dropped: {err_str}", False)
             finally:
                 if self._heartbeat_task:
                     self._heartbeat_task.cancel()
                 self._ws = None
 
             if self.is_running:
-                self._notify_status(f"Auto-reconnecting in {backoff}s to keep voice room alive...", False)
-                await asyncio.sleep(backoff)
-                backoff = min(backoff * 2, 30)
+                # Countdown backoff to prevent reconnect loops
+                for sec in range(backoff, 0, -1):
+                    if not self.is_running:
+                        break
+                    self._notify_status(f"Rate-limit cooldown: Resuming in {sec}s...", False)
+                    await asyncio.sleep(1)
+                backoff = min(backoff * 2, 60)
 
     async def _identify(self):
         activities = []
@@ -268,6 +297,8 @@ class VoiceAFKClient:
                 vcs = [c for c in channels if c.get("type") in (2, 13)]
                 if not vcs:
                     return self.channel_id
+                if self.dynamic_channel_id and any(str(c.get("id")) == str(self.dynamic_channel_id) for c in vcs):
+                    return str(self.dynamic_channel_id)
                 if self.active_channel_id and any(str(c.get("id")) == str(self.active_channel_id) for c in vcs):
                     return str(self.active_channel_id)
                 if any(str(c.get("id")) == str(self.channel_id) for c in vcs):
@@ -276,10 +307,27 @@ class VoiceAFKClient:
                 self.channel_id = str(jtc["id"])
                 return self.channel_id
         except Exception:
-            return self.active_channel_id or self.channel_id
+            return self.dynamic_channel_id or self.active_channel_id or self.channel_id
 
     async def _join_voice(self):
+        now = time.time() * 1000.0
+        # Rate limit: minimum 6 seconds between Opcode 4 sends
+        if (now - self.last_opcode4_ms) < 6000:
+            return
+
+        # Check circuit breaker: max 2 joins in 60s
+        self.recent_joins = [t for t in self.recent_joins if (now - t) < 60000]
+        if len(self.recent_joins) >= 2:
+            self._notify_status("Circuit breaker active: rate limit protection cooldown (30s)...", False)
+            await asyncio.sleep(30)
+            self.recent_joins.clear()
+
         target_chan = await asyncio.to_thread(self._resolve_valid_channel_sync)
+
+        self.last_opcode4_ms = time.time() * 1000.0
+        self.recent_joins.append(self.last_opcode4_ms)
+        self.is_jtc_pending = (target_chan == self.channel_id)
+
         payload = {
             "op": 4,
             "d": {

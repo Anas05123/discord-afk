@@ -161,11 +161,11 @@ class MainWindow(ctk.CTk):
         # Nav Items
         self.nav_buttons: Dict[str, ctk.CTkButton] = {}
         nav_items = [
-            ("activity", "🎮  Activity Studio"),
-            ("quests", "🎯  Discord Quests"),
-            ("voice", "🎙️  Voice Room AFK"),
-            ("games", "🔎  Game Catalog"),
-            ("cloud", "☁️  24/7 Cloud Guide")
+            ("activity", "◈  Activity Studio"),
+            ("quests", "◈  Discord Quests"),
+            ("voice", "◈  Voice Room AFK"),
+            ("games", "◈  Game Catalog"),
+            ("cloud", "◈  24/7 Cloud Guide")
         ]
 
         nav_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
@@ -200,7 +200,7 @@ class MainWindow(ctk.CTk):
 
         self.lbl_sidebar_rpc = ctk.CTkLabel(
             status_card,
-            text="⚪ RPC: Ready",
+            text="○ RPC: Standby",
             font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
             text_color=TEXT_SECONDARY,
             anchor="w"
@@ -209,7 +209,7 @@ class MainWindow(ctk.CTk):
 
         self.lbl_sidebar_voice = ctk.CTkLabel(
             status_card,
-            text="⚪ Voice: Offline",
+            text="○ Voice: Offline",
             font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
             text_color=TEXT_SECONDARY,
             anchor="w"
@@ -261,7 +261,7 @@ class MainWindow(ctk.CTk):
         # Header Apply Button
         self.btn_top_apply = ctk.CTkButton(
             top_bar,
-            text="✨ Set Activity on Discord",
+            text="Set Activity on Discord",
             height=38,
             font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
             fg_color=COLOR_BLURPLE,
@@ -276,7 +276,7 @@ class MainWindow(ctk.CTk):
         left_scroll.grid(row=1, column=0, sticky="nsew", padx=(20, 10), pady=(0, 16))
 
         # --- Card A: Verified Game & Creative Presets ---
-        p_card = self._create_section_card(left_scroll, "⚡ Quick Presets (Creative Design, Coding & Gaming)")
+        p_card = self._create_section_card(left_scroll, "Quick Presets (Creative Tools, Coding & Gaming)")
         preset_grid = ctk.CTkFrame(p_card, fg_color="transparent")
         preset_grid.pack(fill="x", padx=14, pady=(0, 12))
         preset_grid.grid_columnconfigure((0, 1, 2, 3), weight=1)
@@ -317,7 +317,7 @@ class MainWindow(ctk.CTk):
             self.preset_buttons[key] = btn
 
         # --- Card B: Framework & Creative Tool Badges ---
-        lang_card = self._create_section_card(left_scroll, "🏷️ Creative Tool & Language Badge (Small Icon)")
+        lang_card = self._create_section_card(left_scroll, "Creative Tool & Framework Badges (Small Icon)")
         
         l_desc = ctk.CTkLabel(
             lang_card,
@@ -359,7 +359,7 @@ class MainWindow(ctk.CTk):
             self.lang_pills[item["id"]] = btn
 
         # --- Card C: Details Form ---
-        form_card = self._create_section_card(left_scroll, "⚙️ Activity Customization")
+        form_card = self._create_section_card(left_scroll, "Activity Customization")
         
         self.entry_client_id = self._create_clean_input(form_card, "Application ID (Client ID):", "810516608442695700")
         self.entry_details = self._create_clean_input(form_card, "Details (Line 1):", "Editing SyntaFlow")
@@ -481,7 +481,7 @@ class MainWindow(ctk.CTk):
         self.entry_b2_url.bind("<KeyRelease>", lambda e: self._on_field_change())
 
         # --- Card D: Auto-Detect ---
-        ad_card = self._create_section_card(left_scroll, "🤖 Smart Creative & Code Auto-Detection")
+        ad_card = self._create_section_card(left_scroll, "Smart Creative & Code Auto-Detection")
         ad_desc = ctk.CTkLabel(
             ad_card,
             text="Automatically detects Adobe Photoshop (.psd), Illustrator (.ai), After Effects (.aep), Premiere Pro, Figma,\nand VS Code (.tsx/.py/.ts) to update your Discord presence live!",
@@ -611,7 +611,7 @@ class MainWindow(ctk.CTk):
 
         self.btn_clear = ctk.CTkButton(
             btn_row,
-            text="🧹 Clear Presence",
+            text="Clear Presence",
             height=34,
             fg_color=BG_INPUT,
             hover_color=COLOR_RED,
@@ -708,7 +708,7 @@ class MainWindow(ctk.CTk):
         self.quest_search_results_frame.pack(fill="x", padx=14, pady=(0, 8))
 
         # Popular Games Card
-        g_card = self._create_section_card(left_scroll, "🎯 Popular & Trending Discord Quest Games")
+        g_card = self._create_section_card(left_scroll, "Popular & Trending Discord Quests")
 
         info_label = ctk.CTkLabel(
             g_card,
@@ -724,7 +724,7 @@ class MainWindow(ctk.CTk):
 
         btn_queue_all = ctk.CTkButton(
             top_btn_row,
-            text="⚡ Auto-Queue Active Quests (Once Human + FC 27 + Marvel Rivals + Genshin)",
+            text="Queue Active Quests (Once Human, FC 27, Marvel Rivals, Delta Force)",
             height=32,
             fg_color=COLOR_BLURPLE,
             hover_color="#4752c4",
@@ -783,7 +783,7 @@ class MainWindow(ctk.CTk):
 
             btn_add_q = ctk.CTkButton(
                 row,
-                text="➕ Queue",
+                text="+ Queue",
                 width=75,
                 height=30,
                 fg_color=BG_SURFACE,
@@ -795,7 +795,7 @@ class MainWindow(ctk.CTk):
             btn_add_q.pack(side="right", padx=(4, 0), pady=8)
 
         # Custom Executable Card
-        c_card = self._create_section_card(left_scroll, "⚙️ Custom Quest Executable")
+        c_card = self._create_section_card(left_scroll, "Custom Quest Executable")
         c_desc = ctk.CTkLabel(
             c_card,
             text="If Discord adds a new game quest, enter its executable name below to simulate it:",
@@ -831,7 +831,7 @@ class MainWindow(ctk.CTk):
 
         btn_custom_q = ctk.CTkButton(
             c_row,
-            text="➕ Queue Custom",
+            text="+ Queue Custom",
             width=105,
             height=36,
             fg_color=BG_SURFACE,
@@ -846,11 +846,11 @@ class MainWindow(ctk.CTk):
         right_panel.grid(row=1, column=1, sticky="nsew", padx=(10, 20), pady=(0, 16))
 
         # Status & Progress Card
-        prog_card = self._create_section_card(right_panel, "⏱️ Live Quest Progress")
+        prog_card = self._create_section_card(right_panel, "Live Quest Progress")
 
         self.lbl_quest_status = ctk.CTkLabel(
             prog_card,
-            text="⚪ Status: Idle (No game running)",
+            text="○ Status: Idle (No game running)",
             font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
             text_color=TEXT_MUTED,
             anchor="w"
@@ -916,7 +916,7 @@ class MainWindow(ctk.CTk):
 
         self.btn_stop_quest = ctk.CTkButton(
             prog_card,
-            text="⏹️ Stop Game Spoofer",
+            text="Stop Game Spoofer",
             height=36,
             fg_color=BG_INPUT,
             hover_color=COLOR_RED,
@@ -927,7 +927,7 @@ class MainWindow(ctk.CTk):
         self.btn_stop_quest.pack(fill="x", padx=14, pady=(0, 14))
 
         # Auto-Quest Queue & Playlist Card
-        queue_card = self._create_section_card(right_panel, "📋 Auto-Quest Queue & Playlist")
+        queue_card = self._create_section_card(right_panel, "Auto-Quest Queue & Playlist")
 
         q_dur_row = ctk.CTkFrame(queue_card, fg_color="transparent")
         q_dur_row.pack(fill="x", padx=14, pady=(8, 4))
@@ -959,7 +959,7 @@ class MainWindow(ctk.CTk):
 
         self.btn_start_queue = ctk.CTkButton(
             q_ctrl_row,
-            text="▶️ Start Queue",
+            text="Start Queue",
             height=32,
             fg_color=COLOR_BLURPLE,
             hover_color="#4752c4",
@@ -971,7 +971,7 @@ class MainWindow(ctk.CTk):
 
         self.btn_skip_queue = ctk.CTkButton(
             q_ctrl_row,
-            text="⏭️ Skip",
+            text="Skip",
             width=65,
             height=32,
             fg_color=BG_INPUT,
@@ -984,7 +984,7 @@ class MainWindow(ctk.CTk):
 
         self.btn_clear_queue = ctk.CTkButton(
             q_ctrl_row,
-            text="🗑️ Clear",
+            text="Clear",
             width=65,
             height=32,
             fg_color=BG_INPUT,
@@ -1013,7 +1013,7 @@ class MainWindow(ctk.CTk):
         self.lbl_queue_empty.pack(pady=24)
 
         # Step by Step Guide Card
-        guide_card = self._create_section_card(right_panel, "📋 How to Claim Quest Rewards")
+        guide_card = self._create_section_card(right_panel, "How to Claim Quest Rewards")
         guide_text = ctk.CTkLabel(
             guide_card,
             text=(
@@ -1034,7 +1034,7 @@ class MainWindow(ctk.CTk):
         guide_text.pack(anchor="w", padx=14, pady=(8, 14))
 
         # Required Discord Settings Card
-        set_card = self._create_section_card(right_panel, "⚙️ Required Discord Setting")
+        set_card = self._create_section_card(right_panel, "Required Discord Configuration")
         set_text = ctk.CTkLabel(
             set_card,
             text=(
@@ -1167,7 +1167,7 @@ class MainWindow(ctk.CTk):
 
         self.btn_leave_voice = ctk.CTkButton(
             act_box,
-            text="🔴 Leave Voice Room",
+            text="Leave Voice Room",
             height=34,
             font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
             fg_color=COLOR_RED,
@@ -1181,7 +1181,7 @@ class MainWindow(ctk.CTk):
         right_panel = ctk.CTkFrame(page, fg_color="transparent")
         right_panel.grid(row=1, column=1, sticky="nsew", padx=(10, 20), pady=(0, 16))
 
-        m_card = self._create_section_card(right_panel, "📡 Live Room Telemetry")
+        m_card = self._create_section_card(right_panel, "Live Room Telemetry")
 
         self.lbl_mon_status = ctk.CTkLabel(m_card, text="⚪ Status: Disconnected", font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"), text_color=TEXT_MUTED, anchor="w")
         self.lbl_mon_status.pack(fill="x", padx=14, pady=(10, 4))
@@ -1615,9 +1615,9 @@ class MainWindow(ctk.CTk):
         )
 
         if success:
-            self.lbl_sidebar_rpc.configure(text="🟢 RPC: Active", text_color=COLOR_GREEN)
+            self.lbl_sidebar_rpc.configure(text="● RPC: Active", text_color=COLOR_GREEN)
             self.btn_top_apply.configure(text="✅ Activity Updated!", fg_color=COLOR_GREEN)
-            self.after(2000, lambda: self.btn_top_apply.configure(text="✨ Set Activity on Discord", fg_color=COLOR_BLURPLE))
+            self.after(2000, lambda: self.btn_top_apply.configure(text="Set Activity on Discord", fg_color=COLOR_BLURPLE))
         else:
             self.lbl_sidebar_rpc.configure(text="🔴 RPC: Error", text_color=COLOR_RED)
 
@@ -1823,17 +1823,17 @@ class MainWindow(ctk.CTk):
         self.btn_leave_voice.configure(state="disabled")
         self.lbl_mon_status.configure(text="⚪ Status: Disconnected", text_color=TEXT_MUTED)
         self.lbl_mon_latency.configure(text="Heartbeat Latency: - ms")
-        self.lbl_sidebar_voice.configure(text="⚪ Voice: Offline", text_color=TEXT_MUTED)
+        self.lbl_sidebar_voice.configure(text="○ Voice: Offline", text_color=TEXT_MUTED)
 
     def _on_voice_status(self, msg: str, connected: bool):
         def _u():
             if connected:
                 self.lbl_mon_status.configure(text="🟢 Status: " + msg, text_color=COLOR_GREEN)
-                self.lbl_sidebar_voice.configure(text="🟢 Voice: In Room", text_color=COLOR_GREEN)
+                self.lbl_sidebar_voice.configure(text="● Voice: In Room", text_color=COLOR_GREEN)
             else:
                 self.lbl_mon_status.configure(text="⚪ " + msg, text_color=TEXT_MUTED)
                 if not self.voice_afk.is_running:
-                    self.lbl_sidebar_voice.configure(text="⚪ Voice: Offline", text_color=TEXT_MUTED)
+                    self.lbl_sidebar_voice.configure(text="○ Voice: Offline", text_color=TEXT_MUTED)
         self.after(0, _u)
 
     def _on_voice_ready(self, user: Dict[str, Any]):
@@ -2064,7 +2064,7 @@ class MainWindow(ctk.CTk):
 
             btn_add_q = ctk.CTkButton(
                 row,
-                text="➕ Queue",
+                text="+ Queue",
                 width=75,
                 height=30,
                 fg_color=BG_SURFACE,
@@ -2116,7 +2116,7 @@ class MainWindow(ctk.CTk):
 
     def _stop_quest_spoofer(self):
         self.quest_spoofer.stop()
-        self.lbl_quest_status.configure(text="⚪ Status: Idle (No game running)", text_color=TEXT_MUTED)
+        self.lbl_quest_status.configure(text="○ Status: Idle (No game running)", text_color=TEXT_MUTED)
         self.lbl_quest_game.configure(text="Active Game: None")
         self.lbl_quest_exe.configure(text="Process Name: -")
         if hasattr(self, "lbl_quest_rpc_status"):
@@ -2190,7 +2190,7 @@ class MainWindow(ctk.CTk):
                 if self.quest_spoofer.is_queue_mode and self.quest_spoofer.is_running:
                     self.btn_start_queue.configure(text="⏸️ Queue Active", fg_color=COLOR_GREEN)
                 else:
-                    self.btn_start_queue.configure(text="▶️ Start Queue", fg_color=COLOR_BLURPLE)
+                    self.btn_start_queue.configure(text="Start Queue", fg_color=COLOR_BLURPLE)
         self.after(0, _u)
 
     def _on_quest_queue_completed(self):
@@ -2200,7 +2200,7 @@ class MainWindow(ctk.CTk):
                 self.lbl_quest_rpc_status.configure(text="Discord Activity: ⚪ Idle", text_color=TEXT_MUTED)
             self.btn_stop_quest.configure(fg_color=BG_INPUT)
             if hasattr(self, "btn_start_queue"):
-                self.btn_start_queue.configure(text="▶️ Start Queue", fg_color=COLOR_BLURPLE)
+                self.btn_start_queue.configure(text="Start Queue", fg_color=COLOR_BLURPLE)
         self.after(0, _u)
 
     def _render_queue_items(self, queue: List[Dict[str, Any]], active_idx: int):
@@ -2259,7 +2259,7 @@ class MainWindow(ctk.CTk):
     def _add_game_to_queue(self, game_info: Dict[str, Any]):
         self.quest_spoofer.add_to_queue(game_info)
         self.lbl_quest_status.configure(
-            text=f"➕ Added '{game_info.get('name', 'Game')}' to Queue ({len(self.quest_spoofer.queue)} total)",
+            text=f"+ Added '{game_info.get('name', 'Game')}' to Queue ({len(self.quest_spoofer.queue)} total)",
             text_color=COLOR_BLURPLE
         )
 
@@ -2268,7 +2268,7 @@ class MainWindow(ctk.CTk):
 
     def _clear_quest_queue(self):
         self.quest_spoofer.clear_queue()
-        self.lbl_quest_status.configure(text="🗑️ Quest Queue cleared.", text_color=TEXT_MUTED)
+        self.lbl_quest_status.configure(text="Quest Queue cleared.", text_color=TEXT_MUTED)
 
     def _start_quest_queue(self):
         if not self.quest_spoofer.queue:
@@ -2289,7 +2289,7 @@ class MainWindow(ctk.CTk):
             if found and not any(item["game"].get("id") == tid for item in self.quest_spoofer.queue):
                 self.quest_spoofer.add_to_queue(found)
         self.lbl_quest_status.configure(
-            text=f"⚡ Queued Active Quests (Once Human, FC 27, Marvel Rivals, Delta Force) — {len(self.quest_spoofer.queue)} in queue",
+            text=f"Queued Active Quests (Once Human, FC 27, Marvel Rivals, Delta Force) — {len(self.quest_spoofer.queue)} in queue",
             text_color=COLOR_GREEN
         )
 
@@ -2301,7 +2301,7 @@ class MainWindow(ctk.CTk):
         g_info = GamesDatabase.resolve_game(raw)
         self.quest_spoofer.add_to_queue(g_info)
         self.lbl_quest_status.configure(
-            text=f"➕ Added custom '{g_info['name']}' to Queue",
+            text=f"+ Added custom '{g_info['name']}' to Queue",
             text_color=COLOR_BLURPLE
         )
 

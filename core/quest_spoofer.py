@@ -20,7 +20,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "Once Human",
         "exe": "once human/once_human.exe",
         "client_id": "1260340082150346932",
-        "emoji": "🧬",
+        "emoji": "◈",
         "desc": "Active Quest: 15m for 700 Orbs & in-game rewards",
         "icon": "https://cdn.discordapp.com/app-icons/1260340082150346932/cbce2f168fcfb297ee45f7881180bbab.png"
     },
@@ -29,7 +29,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "EA SPORTS FC™ 27",
         "exe": "ea sports fc 27/fc27.exe",
         "client_id": "1531874756096295054",
-        "emoji": "⚽",
+        "emoji": "◈",
         "desc": "Active Quest: 15m for 700 Orbs (Select PC on Quest card)",
         "icon": "https://cdn.discordapp.com/app-icons/1531874756096295054/0c17a8c3d7eef9876e5d8363595f9c66.png"
     },
@@ -38,7 +38,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "Marvel Rivals",
         "exe": "win64/marvel.exe",
         "client_id": "1314395942253756416",
-        "emoji": "🦸",
+        "emoji": "◈",
         "desc": "6v6 Super Hero Team Shooter Discord Quest",
         "icon": "https://cdn.discordapp.com/app-icons/1314395942253756416/9ba7fbfeb0e10e12d1bbf90731a29f8c.png"
     },
@@ -47,7 +47,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "Delta Force",
         "exe": "win64/deltaforceclient-win64-shipping.exe",
         "client_id": "1314682894106497096",
-        "emoji": "🪖",
+        "emoji": "◈",
         "desc": "Tactical FPS Discord Quest rewards",
         "icon": "https://cdn.discordapp.com/app-icons/1314682894106497096/9c1a0170a442e979a40733d71ffba6e6.png"
     },
@@ -56,7 +56,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "Risk of Rain 2",
         "exe": "risk of rain 2/risk of rain 2.exe",
         "client_id": "1402418087793528862",
-        "emoji": "🌧️",
+        "emoji": "◈",
         "desc": "Roguelike Discord Quest 15m rewards",
         "icon": "https://cdn.discordapp.com/app-icons/1402418087793528862/5c3eb807b55cfca626f224b17bf4fe6e.png"
     },
@@ -65,7 +65,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "Where Winds Meet",
         "exe": "where winds meet/wherewindsmeet.exe",
         "client_id": "1437509662303059998",
-        "emoji": "🌪️",
+        "emoji": "◈",
         "desc": "Wuxia Open-World Action RPG Quest",
         "icon": "https://cdn.discordapp.com/app-icons/1437509662303059998/1bc98fa85b542e88a08711ae77c2725e.png"
     },
@@ -74,7 +74,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "Genshin Impact",
         "exe": "genshinimpact.exe",
         "client_id": "762434991303950386",
-        "emoji": "⚔️",
+        "emoji": "◈",
         "desc": "Frequent 15-minute Discord Quest rewards"
     },
     {
@@ -82,7 +82,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "Honkai: Star Rail",
         "exe": "starrail.exe",
         "client_id": "1121201675240210523",
-        "emoji": "🌠",
+        "emoji": "◈",
         "desc": "15-minute Quest rewards (Stellar Jades)"
     },
     {
@@ -90,7 +90,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "Fortnite",
         "exe": "fortniteclient-win64-shipping.exe",
         "client_id": "432980957394370572",
-        "emoji": "🪂",
+        "emoji": "◈",
         "desc": "Play or Stream 15m Quest for in-game cosmetics"
     },
     {
@@ -98,7 +98,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "Neverness to Everness",
         "exe": "htgame.exe",
         "client_id": "1470616226995765409",
-        "emoji": "🏙️",
+        "emoji": "◈",
         "desc": "Anime open-world RPG Discord Quest spoofer",
         "icon": "https://cdn.discordapp.com/app-icons/1470616226995765409/e9a6d14e304637d878c04f35251eaf7d.png"
     },
@@ -107,7 +107,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "March of Giants",
         "exe": "thelineclient-win64-shipping.exe",
         "client_id": "1428223713928810496",
-        "emoji": "🗿",
+        "emoji": "◈",
         "desc": "Official Discord detectable partner game",
         "icon": "https://cdn.discordapp.com/app-icons/1428223713928810496/475baeffb337fe92410d00a2fd4e4d04.png"
     },
@@ -116,7 +116,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "Clive Barker's Hellraiser: Revival",
         "exe": "hellraiser-win64-shipping.exe",
         "client_id": "1552168352116641822",
-        "emoji": "⛓️",
+        "emoji": "◈",
         "desc": "Clive Barker's Hellraiser official executable",
         "icon": "https://cdn.discordapp.com/app-icons/1552168352116641822/303c6f901a9433229d09f940d9338bef.png"
     },
@@ -125,7 +125,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "THE FINALS",
         "exe": "discovery.exe",
         "client_id": "1182713227491147776",
-        "emoji": "🏆",
+        "emoji": "◈",
         "desc": "Official Discord Quest partner game"
     },
     {
@@ -133,7 +133,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "Zenless Zone Zero",
         "exe": "zenlesszonezero.exe",
         "client_id": "1257819671114289184",
-        "emoji": "⚡",
+        "emoji": "◈",
         "desc": "Hoyoverse Discord Quest rewards"
     },
     {
@@ -141,7 +141,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "Dead by Daylight",
         "exe": "deadbydaylight-win64-shipping.exe",
         "client_id": "357607133254254632",
-        "emoji": "🪓",
+        "emoji": "◈",
         "desc": "Play 15m for exclusive Rift & Bloodpoints"
     },
     {
@@ -149,7 +149,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "VALORANT",
         "exe": "valorant-win64-shipping.exe",
         "client_id": "700136079562375258",
-        "emoji": "🎯",
+        "emoji": "◈",
         "desc": "Riot Games Discord Quest support"
     },
     {
@@ -157,7 +157,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "Apex Legends",
         "exe": "r5apex.exe",
         "client_id": "542075586886107149",
-        "emoji": "🔫",
+        "emoji": "◈",
         "desc": "Battle pass / Apex coins Quests"
     },
     {
@@ -165,7 +165,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "ROBLOX",
         "exe": "robloxplayerbeta.exe",
         "client_id": "363445589247131668",
-        "emoji": "🧱",
+        "emoji": "◈",
         "desc": "Roblox badge & quest promotions"
     },
     {
@@ -173,7 +173,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "Overwatch 2",
         "exe": "overwatch.exe",
         "client_id": "356875221078245376",
-        "emoji": "🛡️",
+        "emoji": "◈",
         "desc": "Battle pass and cosmetic drops"
     },
     {
@@ -181,7 +181,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "Warframe",
         "exe": "warframe.x64.exe",
         "client_id": "356877717460877312",
-        "emoji": "⚔️",
+        "emoji": "◈",
         "desc": "Twitch & Discord Quest rewards"
     },
     {
@@ -189,7 +189,7 @@ QUEST_GAMES: List[Dict[str, Any]] = [
         "name": "Minecraft",
         "exe": "minecraft.exe",
         "client_id": "432980957394370572",
-        "emoji": "⛏️",
+        "emoji": "◈",
         "desc": "15m Bedrock & Java cape quests"
     }
 ]

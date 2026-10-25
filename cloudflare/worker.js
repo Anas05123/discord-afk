@@ -374,11 +374,11 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
   </div>
 
   <div class="nav-list">
-    <button class="nav-btn active" id="nav-activity" onclick="switchPage('activity')">🎮 &nbsp;Activity Studio</button>
-    <button class="nav-btn" id="nav-quests" onclick="switchPage('quests')">🎯 &nbsp;Discord Quests</button>
-    <button class="nav-btn" id="nav-voice" onclick="switchPage('voice')">🎙️ &nbsp;Voice Room AFK</button>
-    <button class="nav-btn" id="nav-games" onclick="switchPage('games')">🔎 &nbsp;Game Catalog</button>
-    <button class="nav-btn" id="nav-cloud" onclick="switchPage('cloud')">☁️ &nbsp;24/7 Cloud Guide</button>
+    <button class="nav-btn active" id="nav-activity" onclick="switchPage('activity')">◈ &nbsp;Activity Studio</button>
+    <button class="nav-btn" id="nav-quests" onclick="switchPage('quests')">◈ &nbsp;Discord Quests</button>
+    <button class="nav-btn" id="nav-voice" onclick="switchPage('voice')">◈ &nbsp;Voice Room AFK</button>
+    <button class="nav-btn" id="nav-games" onclick="switchPage('games')">◈ &nbsp;Game Catalog</button>
+    <button class="nav-btn" id="nav-cloud" onclick="switchPage('cloud')">◈ &nbsp;24/7 Cloud Guide</button>
   </div>
 
   <div class="sidebar-spacer"></div>
@@ -400,7 +400,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
         <div class="page-title">Activity & Presence Studio</div>
         <div class="page-sub">Craft custom Discord profile statuses with verified game art and framework badges.</div>
       </div>
-      <button class="btn-primary" id="btnTopApply" onclick="applyActivity()">✨ Set Activity on Discord</button>
+      <button class="btn-primary" id="btnTopApply" onclick="applyActivity()">Set Activity on Discord</button>
     </div>
 
     <div class="split-grid">
@@ -408,20 +408,20 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
       <div class="col-scroll">
         <!-- Card A: Quick Presets -->
         <div class="section-card">
-          <div class="card-title">⚡ Quick Presets (Creative Design, Coding & Gaming)</div>
+          <div class="card-title">Quick Presets (Creative Tools, Coding & Gaming)</div>
           <div class="preset-grid" id="presetGrid"></div>
         </div>
 
         <!-- Card B: Badges -->
         <div class="section-card">
-          <div class="card-title">🏷️ Creative Tool & Language Badge (Small Icon)</div>
+          <div class="card-title">Creative Tool & Framework Badges (Small Icon)</div>
           <div class="card-desc">Choose your active design tool or programming framework badge (renders as a small badge on your profile):</div>
           <div class="pill-grid" id="badgeGrid"></div>
         </div>
 
         <!-- Card C: Activity Customization -->
         <div class="section-card">
-          <div class="card-title">⚙️ Activity Customization</div>
+          <div class="card-title">Activity Customization</div>
           <div class="form-group">
             <label class="form-label">Application ID (Client ID):</label>
             <input class="form-input" id="entryClientId" value="" placeholder="e.g. 1445160676522856458" oninput="updatePreview()">
@@ -453,7 +453,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 
           <!-- Elapsed Timer Chooser -->
           <div class="form-group" style="margin-top: 10px;">
-            <label class="form-label">⏱️ Elapsed Timer Mode (Natural or Custom Time):</label>
+            <label class="form-label">Elapsed Timer Mode:</label>
             <div class="form-row">
               <label class="checkbox-row" style="width: 110px;">
                 <input type="checkbox" id="cbShowTimer" checked onchange="updatePreview()"> Show Timer
@@ -468,14 +468,14 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
                 <option value="48,0">🚀 48 Hours Elapsed (2 Days)</option>
                 <option value="custom">🛠️ Custom Hours & Minutes</option>
               </select>
-              <button class="btn-secondary" style="flex: 0 0 115px; height: 34px;" onclick="resetTimerNatural()">🔄 Natural (00:00)</button>
+              <button class="btn-secondary" style="flex: 0 0 115px; height: 34px;" onclick="resetTimerNatural()">Reset (00:00)</button>
             </div>
             <div class="form-row">
               <span style="font-size: 11px; color: var(--text-muted);">Custom Elapsed — Hours:</span>
               <input class="form-input" id="entryTimerHours" type="number" min="0" value="0" style="width: 60px;">
               <span style="font-size: 11px; color: var(--text-muted);">Minutes:</span>
               <input class="form-input" id="entryTimerMins" type="number" min="0" value="0" style="width: 60px;">
-              <button class="btn-primary" style="flex: 1; height: 34px; font-size: 11px;" onclick="applyCustomTimer()">⏱️ Set Elapsed Time</button>
+              <button class="btn-primary" style="flex: 1; height: 34px; font-size: 11px;" onclick="applyCustomTimer()">Set Elapsed Time</button>
             </div>
           </div>
 
@@ -495,7 +495,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 
         <!-- Card D: Auto-Detect -->
         <div class="section-card">
-          <div class="card-title">🤖 Smart Creative & Code Auto-Detection</div>
+          <div class="card-title">Smart Creative & Code Auto-Detection</div>
           <div class="card-desc">Automatically detects Adobe Photoshop (.psd), Illustrator (.ai), After Effects (.aep), Premiere Pro, Figma, and VS Code (.tsx/.py/.ts) to update your Discord presence live!</div>
           <label class="checkbox-row" style="font-weight: 700; margin-bottom: 6px;">
             <input type="checkbox" checked> Enable Auto-Detect Design Tools & Active Files
@@ -539,8 +539,8 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 
         <div class="section-card">
           <div class="quick-actions-row">
-            <button class="btn-secondary" onclick="clearPresence()">🧹 Clear Presence</button>
-            <button class="btn-secondary" onclick="applyActivity()">🔄 Sync to Cloud Now</button>
+            <button class="btn-secondary" onclick="clearPresence()">Clear Presence</button>
+            <button class="btn-secondary" onclick="applyActivity()">Sync to Cloud Now</button>
           </div>
         </div>
       </div>
@@ -559,7 +559,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
     <div class="split-grid">
       <div class="col-scroll">
         <div class="section-card">
-          <div class="card-title">🔍 Search & Detect Any Game (24,000+ Games)</div>
+          <div class="card-title">Search & Detect Any Game (24,000+ Database)</div>
           <div class="card-desc">Type any game name (e.g. NTE, Giants, Hellraiser, Helldivers, Cyberpunk, GTA) to auto-detect its executable & launch spoofing:</div>
           <div class="form-row">
             <input class="form-input" id="questSearchInput" placeholder="Search game name or executable (e.g. NTE, Giants, Hellraiser)..." style="flex: 1;">
@@ -569,28 +569,28 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
         </div>
 
         <div class="section-card">
-          <div class="card-title">🎯 Popular & Trending Discord Quest Games</div>
+          <div class="card-title">Popular & Trending Discord Quests</div>
           <div class="card-desc">Accept the quest in Discord (User Settings > Gift Inventory), then click Launch Spoof below:</div>
           <button class="btn-primary" style="width: 100%; height: 32px; font-size: 11px; margin-bottom: 10px;" onclick="queueTopQuests()">
-            ⚡ Auto-Queue Top Quests (NTE + Giants + Hellraiser + Genshin)
+            Auto-Queue Active Quests (Once Human, FC 27, Marvel Rivals, Delta Force)
           </button>
           <div id="questGamesList"></div>
         </div>
 
         <div class="section-card">
-          <div class="card-title">⚙️ Custom Quest Executable</div>
+          <div class="card-title">Custom Quest Executable</div>
           <div class="card-desc">If Discord adds a new game quest, enter its executable name below to simulate it:</div>
           <div class="form-row">
             <input class="form-input" id="customQuestExe" placeholder="e.g. palworld.exe or wutheringwaves.exe" style="flex: 1;">
             <button class="btn-secondary" style="flex: 0 0 110px;" onclick="launchCustomQuest()">Launch Custom</button>
-            <button class="btn-secondary" style="flex: 0 0 110px;" onclick="queueCustomQuest()">➕ Queue Custom</button>
+            <button class="btn-secondary" style="flex: 0 0 110px;" onclick="queueCustomQuest()">+ Queue Custom</button>
           </div>
         </div>
       </div>
 
       <div class="col-scroll">
         <div class="section-card">
-          <div class="card-title">⏱️ Live Quest Progress</div>
+          <div class="card-title">Live Quest Progress & Monitor</div>
           <div id="lblQuestStatus" style="font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">⚪ Status: Idle (No game running)</div>
           <div id="lblQuestGame" style="font-size: 12px; color: var(--text-secondary);">Active Game: None</div>
           <div id="lblQuestExe" style="font-size: 11px; color: var(--text-muted); margin: 2px 0;">Process Name: -</div>
@@ -602,11 +602,11 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
           </div>
 
           <div class="progress-track"><div class="progress-fill" id="questProgressBar"></div></div>
-          <button class="btn-secondary" style="width: 100%; height: 36px;" onclick="stopQuestSpoofer()">⏹️ Stop Game Spoofer</button>
+          <button class="btn-secondary" style="width: 100%; height: 36px;" onclick="stopQuestSpoofer()">Stop Game Spoofer</button>
         </div>
 
         <div class="section-card">
-          <div class="card-title">📋 Auto-Quest Queue & Playlist</div>
+          <div class="card-title">Auto-Quest Queue & Playlist</div>
           <div class="form-row" style="margin-bottom: 8px;">
             <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">Duration / Game:</span>
             <select class="form-select" id="queueDurationSelect" onchange="updateQueueDuration(this.value)" style="flex: 1;">
@@ -617,13 +617,13 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             </select>
           </div>
           <div class="form-row" style="margin-bottom: 8px;">
-            <button class="btn-primary" style="flex: 1; height: 32px; font-size: 11px;" id="btnStartQueue" onclick="startQuestQueue()">▶️ Start Queue</button>
-            <button class="btn-secondary" style="flex: 0 0 70px; height: 32px;" onclick="skipQuestQueue()">⏭️ Skip</button>
-            <button class="btn-secondary" style="flex: 0 0 70px; height: 32px;" onclick="clearQuestQueue()">🗑️ Clear</button>
+            <button class="btn-primary" style="flex: 1; height: 32px; font-size: 11px;" id="btnStartQueue" onclick="startQuestQueue()">Start Queue</button>
+            <button class="btn-secondary" style="flex: 0 0 70px; height: 32px;" onclick="skipQuestQueue()">Skip</button>
+            <button class="btn-secondary" style="flex: 0 0 70px; height: 32px;" onclick="clearQuestQueue()">Clear</button>
           </div>
           <div class="queue-box" id="queueItemsBox">
             <div style="text-align: center; color: var(--text-muted); font-size: 11px; padding-top: 28px;">
-              No games in queue.<br>Click '➕ Queue' on any game to build your auto-playlist!
+              No games in queue.<br>Click '+ Queue' on any game to build your auto-playlist!
             </div>
           </div>
         </div>
@@ -643,11 +643,11 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
     <div class="split-grid">
       <div class="col-scroll">
         <div class="section-card">
-          <div class="card-title">🔐 Connection Credentials & Live Room Picker</div>
+          <div class="card-title">Connection Credentials & Live Room Picker</div>
           <div class="form-group">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
               <label class="form-label" style="margin:0;">Select Server (Guild):</label>
-              <button class="btn-secondary" style="height:24px; padding:0 10px; font-size:10px;" onclick="loadUserGuilds()">⚡ Load My Servers</button>
+              <button class="btn-secondary" style="height:24px; padding:0 10px; font-size:10px;" onclick="loadUserGuilds()">Load My Servers</button>
             </div>
             <select class="form-select" id="selectGuildDropdown" onchange="onGuildDropdownChange(this.value)" style="margin-bottom:6px;">
               <option value="1442511921898192917">★ Main Server (1442511921898192917)</option>
@@ -658,7 +658,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
           <div class="form-group">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
               <label class="form-label" style="margin:0;">Select Voice Room in Server:</label>
-              <button class="btn-secondary" style="height:24px; padding:0 10px; font-size:10px;" onclick="loadGuildVoiceChannels()">🔄 Refresh Voice Rooms</button>
+              <button class="btn-secondary" style="height:24px; padding:0 10px; font-size:10px;" onclick="loadGuildVoiceChannels()">Refresh Voice Rooms</button>
             </div>
             <select class="form-select" id="selectChannelDropdown" onchange="onChannelDropdownChange(this.value)" style="margin-bottom:6px;">
               <option value="1484570674659070063">🔊 ➕・JOIN TO CREATE (Auto-Creates Your Room) — 1484570674659070063</option>
@@ -688,14 +688,14 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
               <input type="checkbox" id="cbDeaf" checked> Self-Deafen (Zero Bandwidth)
             </label>
           </div>
-          <button class="btn-green" id="btnJoinVoice" style="width: 100%; height: 42px; font-size: 13px; margin-bottom: 8px;" onclick="joinVoiceRoom()">🟢 Join / Update Voice Room (24/7 AFK)</button>
-          <button class="btn-red" style="width: 100%; height: 34px; font-size: 11px;" onclick="leaveVoiceRoom()">🔴 Leave Voice Room</button>
+          <button class="btn-green" id="btnJoinVoice" style="width: 100%; height: 42px; font-size: 13px; margin-bottom: 8px;" onclick="joinVoiceRoom()">Join Voice Room (24/7 AFK)</button>
+          <button class="btn-red" style="width: 100%; height: 34px; font-size: 11px;" onclick="leaveVoiceRoom()">Leave Voice Room</button>
         </div>
       </div>
 
       <div class="col-scroll">
         <div class="section-card">
-          <div class="card-title">📡 Live Room Telemetry</div>
+          <div class="card-title">Live Room Telemetry</div>
           <div id="monStatus" style="font-size: 13px; font-weight: 700; color: var(--green); margin-bottom: 6px;">🟢 Status: Connected & In Voice Room (24/7 Cloud)</div>
           <div id="monUser" style="font-size: 12px; color: var(--text-secondary); margin: 4px 0;">Account: la2nis</div>
           <div id="monRoom" style="font-size: 12px; color: var(--text-muted); margin: 4px 0;">Active Voice Channel: 1484570674659070063</div>
@@ -716,7 +716,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
     </div>
     <div style="padding: 4px 24px 20px 24px; overflow-y: auto; flex: 1;">
       <div class="section-card">
-        <div class="card-title">🔍 Game & Application Search Engine</div>
+        <div class="card-title">Game & Application Search Engine</div>
         <div class="form-row">
           <input class="form-input" id="catalogSearchInput" placeholder="Type game or app name (e.g. Illustrator, Photoshop, NTE, GTA, Roblox)..." style="flex: 1;" onkeydown="if(event.key==='Enter') searchCatalog()">
           <button class="btn-primary" style="height: 34px;" onclick="searchCatalog()">Search</button>
@@ -736,7 +736,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
     </div>
     <div style="padding: 4px 24px 20px 24px; overflow-y: auto; flex: 1;">
       <div class="section-card">
-        <div class="card-title">☁️ Active 24/7 Cloudflare Durable Object Host</div>
+        <div class="card-title">24/7 Cloud Hosting Engine</div>
         <div class="card-desc" style="font-size: 12px; color: var(--text-secondary);">
           Your Discord Studio Pro instance is actively hosted on Cloudflare's global edge network using a persistent Durable Object with a 25-second internal heartbeat alarm.<br><br>
           • <b>Status:</b> 🟢 Online 24/7 (Zero PC power required)<br>
@@ -753,40 +753,40 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 const PRESETS_DATA = ${JSON.stringify(PRESETS)};
 
 const BADGES_DATA = [
-  { id: "none", name: "No Badge", emoji: "🚫", tooltip: "Clean Activity", url: "" },
-  { id: "photoshop", name: "Photoshop", emoji: "🎨", tooltip: "Adobe Photoshop CC", url: "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/PHXS.png" },
-  { id: "illustrator", name: "Illustrator", emoji: "✒️", tooltip: "Adobe Illustrator CC", url: "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/ILST.png" },
-  { id: "aftereffects", name: "After Effects", emoji: "✨", tooltip: "Adobe After Effects CC", url: "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/AEFT.png" },
-  { id: "premiere", name: "Premiere Pro", emoji: "🎬", tooltip: "Adobe Premiere Pro CC", url: "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/PPRO.png" },
-  { id: "figma", name: "Figma", emoji: "📐", tooltip: "Figma UI/UX", url: "https://cdn-icons-png.flaticon.com/512/5968/5968705.png" },
-  { id: "react", name: "React", emoji: "⚛️", tooltip: "React 19 / JSX", url: "https://raw.githubusercontent.com/github/explore/main/topics/react/react.png" },
-  { id: "nextjs", name: "Next.js", emoji: "⚡", tooltip: "Next.js App Router", url: "https://raw.githubusercontent.com/github/explore/main/topics/nextjs/nextjs.png" },
-  { id: "typescript", name: "TypeScript", emoji: "🟦", tooltip: "TypeScript 5.4", url: "https://raw.githubusercontent.com/github/explore/main/topics/typescript/typescript.png" },
-  { id: "javascript", name: "JavaScript", emoji: "🟨", tooltip: "JavaScript ES2024", url: "https://raw.githubusercontent.com/github/explore/main/topics/javascript/javascript.png" },
-  { id: "python", name: "Python", emoji: "🐍", tooltip: "Python 3.12", url: "https://raw.githubusercontent.com/github/explore/main/topics/python/python.png" },
-  { id: "nodejs", name: "Node.js", emoji: "💚", tooltip: "Node.js v22", url: "https://raw.githubusercontent.com/github/explore/main/topics/nodejs/nodejs.png" },
-  { id: "rust", name: "Rust", emoji: "🦀", tooltip: "Rust 2024", url: "https://raw.githubusercontent.com/github/explore/main/topics/rust/rust.png" },
-  { id: "cpp", name: "C++", emoji: "🔷", tooltip: "C++20 / STL", url: "https://raw.githubusercontent.com/github/explore/main/topics/cpp/cpp.png" },
-  { id: "csharp", name: "C# / .NET", emoji: "💠", tooltip: "C# 12 / .NET 8", url: "https://raw.githubusercontent.com/github/explore/main/topics/csharp/csharp.png" },
-  { id: "tailwind", name: "Tailwind CSS", emoji: "🎨", tooltip: "Tailwind CSS", url: "https://raw.githubusercontent.com/github/explore/main/topics/tailwind/tailwind.png" }
+  { id: "none", name: "No Badge", emoji: "—", tooltip: "Clean Activity", url: "" },
+  { id: "photoshop", name: "Photoshop", emoji: "Ps", tooltip: "Adobe Photoshop CC", url: "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/PHXS.png" },
+  { id: "illustrator", name: "Illustrator", emoji: "Ai", tooltip: "Adobe Illustrator CC", url: "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/ILST.png" },
+  { id: "aftereffects", name: "After Effects", emoji: "Ae", tooltip: "Adobe After Effects CC", url: "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/AEFT.png" },
+  { id: "premiere", name: "Premiere Pro", emoji: "Pr", tooltip: "Adobe Premiere Pro CC", url: "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/PPRO.png" },
+  { id: "figma", name: "Figma", emoji: "Fg", tooltip: "Figma UI/UX", url: "https://cdn-icons-png.flaticon.com/512/5968/5968705.png" },
+  { id: "react", name: "React", emoji: "Re", tooltip: "React 19 / JSX", url: "https://raw.githubusercontent.com/github/explore/main/topics/react/react.png" },
+  { id: "nextjs", name: "Next.js", emoji: "Nx", tooltip: "Next.js App Router", url: "https://raw.githubusercontent.com/github/explore/main/topics/nextjs/nextjs.png" },
+  { id: "typescript", name: "TypeScript", emoji: "TS", tooltip: "TypeScript 5.4", url: "https://raw.githubusercontent.com/github/explore/main/topics/typescript/typescript.png" },
+  { id: "javascript", name: "JavaScript", emoji: "JS", tooltip: "JavaScript ES2024", url: "https://raw.githubusercontent.com/github/explore/main/topics/javascript/javascript.png" },
+  { id: "python", name: "Python", emoji: "Py", tooltip: "Python 3.12", url: "https://raw.githubusercontent.com/github/explore/main/topics/python/python.png" },
+  { id: "nodejs", name: "Node.js", emoji: "Node", tooltip: "Node.js v22", url: "https://raw.githubusercontent.com/github/explore/main/topics/nodejs/nodejs.png" },
+  { id: "rust", name: "Rust", emoji: "Rs", tooltip: "Rust 2024", url: "https://raw.githubusercontent.com/github/explore/main/topics/rust/rust.png" },
+  { id: "cpp", name: "C++", emoji: "C++", tooltip: "C++20 / STL", url: "https://raw.githubusercontent.com/github/explore/main/topics/cpp/cpp.png" },
+  { id: "csharp", name: "C# / .NET", emoji: "C#", tooltip: "C# 12 / .NET 8", url: "https://raw.githubusercontent.com/github/explore/main/topics/csharp/csharp.png" },
+  { id: "tailwind", name: "Tailwind CSS", emoji: "CSS", tooltip: "Tailwind CSS", url: "https://raw.githubusercontent.com/github/explore/main/topics/tailwind/tailwind.png" }
 ];
 
 const QUEST_GAMES_DATA = [
-  { id: "oncehuman", name: "Once Human", exe: "once human/once_human.exe", client_id: "1260340082150346932", emoji: "🧬", desc: "Active Quest: 15m for 700 Orbs" },
-  { id: "fc27", name: "EA SPORTS FC™ 27", exe: "ea sports fc 27/fc27.exe", client_id: "1531874756096295054", emoji: "⚽", desc: "Active Quest: 15m for 700 Orbs (Select PC)" },
-  { id: "marvelrivals", name: "Marvel Rivals", exe: "win64/marvel.exe", client_id: "1314395942253756416", emoji: "🦸", desc: "6v6 Super Hero Team Shooter" },
-  { id: "deltaforce", name: "Delta Force", exe: "win64/deltaforceclient-win64-shipping.exe", client_id: "1314682894106497096", emoji: "🪖", desc: "Tactical First-Person Shooter" },
-  { id: "ror2", name: "Risk of Rain 2", exe: "risk of rain 2/risk of rain 2.exe", client_id: "1402418087793528862", emoji: "🌧️", desc: "Multiplayer Roguelike" },
-  { id: "wherewindsmeet", name: "Where Winds Meet", exe: "where winds meet/wherewindsmeet.exe", client_id: "1437509662303059998", emoji: "🌪️", desc: "Wuxia Open-World RPG" },
-  { id: "gta6", name: "Grand Theft Auto VI", exe: "gta6.exe", client_id: "1445160676522856458", emoji: "🌴", desc: "Rockstar Games Next-Gen Open World" },
-  { id: "nte", name: "Neverness to Everness (NTE)", exe: "htgame.exe", client_id: "1470616226995765409", emoji: "🌌", desc: "Anime Open-World RPG" },
-  { id: "giants", name: "March of Giants", exe: "thelineclient-win64-shipping.exe", client_id: "1428223713928810496", emoji: "🗿", desc: "War Strategy MOBA" },
-  { id: "hellraiser", name: "Clive Barker's Hellraiser: Revival", exe: "hellraiser-win64-shipping.exe", client_id: "1552168352116641822", emoji: "⛓️", desc: "Horror Survival" },
-  { id: "helldivers2", name: "HELLDIVERS 2", exe: "helldivers2.exe", client_id: "1198592398579482654", emoji: "🦅", desc: "Galactic Co-Op Shooter" },
-  { id: "genshin", name: "Genshin Impact", exe: "genshinimpact.exe", client_id: "762434991303950386", emoji: "⚔️", desc: "Open-World Action RPG" },
-  { id: "valorant", name: "VALORANT", exe: "valorant.exe", client_id: "700136079562375258", emoji: "🎯", desc: "5v5 Tactical Shooter" },
-  { id: "fortnite", name: "Fortnite", exe: "fortniteclient-win64-shipping.exe", client_id: "432980957394370572", emoji: "🪂", desc: "Battle Royale" },
-  { id: "cyberpunk", name: "Cyberpunk 2077", exe: "cyberpunk2077.exe", client_id: "658056503651106837", emoji: "🦾", desc: "Night City RPG" }
+  { id: "oncehuman", name: "Once Human", exe: "once human/once_human.exe", client_id: "1260340082150346932", emoji: "◈", desc: "Active Quest: 15m for 700 Orbs" },
+  { id: "fc27", name: "EA SPORTS FC™ 27", exe: "ea sports fc 27/fc27.exe", client_id: "1531874756096295054", emoji: "◈", desc: "Active Quest: 15m for 700 Orbs (Select PC)" },
+  { id: "marvelrivals", name: "Marvel Rivals", exe: "win64/marvel.exe", client_id: "1314395942253756416", emoji: "◈", desc: "6v6 Super Hero Team Shooter" },
+  { id: "deltaforce", name: "Delta Force", exe: "win64/deltaforceclient-win64-shipping.exe", client_id: "1314682894106497096", emoji: "◈", desc: "Tactical First-Person Shooter" },
+  { id: "ror2", name: "Risk of Rain 2", exe: "risk of rain 2/risk of rain 2.exe", client_id: "1402418087793528862", emoji: "◈", desc: "Multiplayer Roguelike" },
+  { id: "wherewindsmeet", name: "Where Winds Meet", exe: "where winds meet/wherewindsmeet.exe", client_id: "1437509662303059998", emoji: "◈", desc: "Wuxia Open-World RPG" },
+  { id: "gta6", name: "Grand Theft Auto VI", exe: "gta6.exe", client_id: "1445160676522856458", emoji: "◈", desc: "Rockstar Games Next-Gen Open World" },
+  { id: "nte", name: "Neverness to Everness (NTE)", exe: "htgame.exe", client_id: "1470616226995765409", emoji: "◈", desc: "Anime Open-World RPG" },
+  { id: "giants", name: "March of Giants", exe: "thelineclient-win64-shipping.exe", client_id: "1428223713928810496", emoji: "◈", desc: "War Strategy MOBA" },
+  { id: "hellraiser", name: "Clive Barker's Hellraiser: Revival", exe: "hellraiser-win64-shipping.exe", client_id: "1552168352116641822", emoji: "◈", desc: "Horror Survival" },
+  { id: "helldivers2", name: "HELLDIVERS 2", exe: "helldivers2.exe", client_id: "1198592398579482654", emoji: "◈", desc: "Galactic Co-Op Shooter" },
+  { id: "genshin", name: "Genshin Impact", exe: "genshinimpact.exe", client_id: "762434991303950386", emoji: "◈", desc: "Open-World Action RPG" },
+  { id: "valorant", name: "VALORANT", exe: "valorant.exe", client_id: "700136079562375258", emoji: "◈", desc: "5v5 Tactical Shooter" },
+  { id: "fortnite", name: "Fortnite", exe: "fortniteclient-win64-shipping.exe", client_id: "432980957394370572", emoji: "◈", desc: "Battle Royale" },
+  { id: "cyberpunk", name: "Cyberpunk 2077", exe: "cyberpunk2077.exe", client_id: "658056503651106837", emoji: "◈", desc: "Night City RPG" }
 ];
 
 let startTimestampMs = Date.now();
@@ -806,9 +806,9 @@ function switchPage(pageKey) {
 
 function initGrids() {
   const presetList = [
-    ["🌴 GTA VI", "gta6"], ["🎨 Photoshop", "photoshop"], ["✒️ Illustrator", "illustrator"], ["✨ After Effects", "aftereffects"], ["🎬 Premiere Pro", "premiere"],
-    ["📐 Figma", "figma"], ["💻 VS Code", "vscode"], ["🎯 VALORANT", "valorant"], ["🪂 Fortnite", "fortnite"],
-    ["🧱 ROBLOX", "roblox"], ["⚔️ Genshin", "genshin"], ["☕ Lo-Fi Chill", "chill"], ["📚 Deep Study", "studying"]
+    ["GTA VI", "gta6"], ["Photoshop", "photoshop"], ["Illustrator", "illustrator"], ["After Effects", "aftereffects"], ["Premiere Pro", "premiere"],
+    ["Figma", "figma"], ["VS Code", "vscode"], ["VALORANT", "valorant"], ["Fortnite", "fortnite"],
+    ["ROBLOX", "roblox"], ["Genshin", "genshin"], ["Lo-Fi Chill", "chill"], ["Deep Study", "studying"]
   ];
   const pGrid = document.getElementById('presetGrid');
   pGrid.innerHTML = presetList.map(([label, key]) =>
@@ -828,7 +828,7 @@ function initGrids() {
         <div class="quest-title">\${g.name}</div>
         <div class="quest-sub">\${g.desc} • \${g.exe}</div>
       </div>
-      <button class="btn-secondary" style="flex: 0 0 75px; height: 30px;" onclick='addQuestToQueue(\${JSON.stringify(g)})'>➕ Queue</button>
+      <button class="btn-secondary" style="flex: 0 0 75px; height: 30px;" onclick='addQuestToQueue(\${JSON.stringify(g)})'>+ Queue</button>
       <button class="btn-primary" style="height: 30px; font-size: 11px; padding: 0 12px;" onclick='startQuestSpoof(\${JSON.stringify(g)})'>Launch Spoof</button>
     </div>
   \`).join('');
@@ -953,7 +953,7 @@ async function applyActivity(resetTimer = false, presetKey = '') {
   btn.textContent = '✅ Activity Updated!';
   btn.style.background = 'var(--green)';
   setTimeout(() => {
-    btn.textContent = '✨ Set Activity on Discord';
+    btn.textContent = 'Set Activity on Discord';
     btn.style.background = 'var(--blurple)';
   }, 2000);
 
@@ -1056,7 +1056,7 @@ function queueTopQuests() {
 function renderQuestQueue() {
   const box = document.getElementById('queueItemsBox');
   if (!questQueue.length) {
-    box.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 11px; padding-top: 28px;">No games in queue.<br>Click \\'➕ Queue\\' on any game to build your auto-playlist!</div>';
+    box.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 11px; padding-top: 28px;">No games in queue.<br>Click \\'+ Queue\\' on any game to build your auto-playlist!</div>';
     return;
   }
   box.innerHTML = questQueue.map((item, i) => \`
@@ -1213,7 +1213,7 @@ async function joinVoiceRoom() {
     document.getElementById('monStatus').textContent = '🔴 Error joining voice room: ' + e;
     document.getElementById('monStatus').style.color = 'var(--red)';
   } finally {
-    if (btn) btn.textContent = '🟢 Join / Update Voice Room (24/7 AFK)';
+    if (btn) btn.textContent = 'Join Voice Room (24/7 AFK)';
   }
 }
 
