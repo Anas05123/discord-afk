@@ -404,8 +404,9 @@ function buildPresence(act, startMs) {
     const displayName = act.name || appInfo.name || "Custom Activity";
     const entry = {
       name: displayName,
-      type: Number(act.type || 0),
-      timestamps: { start: startMs || Date.now() }
+      type: Number(act.type !== undefined ? act.type : 0),
+      timestamps: { start: startMs || Date.now() },
+      flags: 1
     };
     if (act.details) entry.details = act.details;
     if (act.state) entry.state = act.state;

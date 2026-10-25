@@ -605,6 +605,24 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
           <button class="btn-secondary" style="width: 100%; height: 36px;" onclick="stopQuestSpoofer()">Stop Game Spoofer</button>
         </div>
 
+        <div class="section-card" style="border: 1px solid var(--blurple);">
+          <div class="card-title" style="color: var(--blurple); display:flex; align-items:center; gap:6px;">
+            <span>⚡</span> Instant Discord Client Quest Completer
+          </div>
+          <div class="card-desc" style="font-size: 11px; line-height: 1.5;">
+            Discord requires quests to report progress from a Discord client session. To complete <b>any active Quest instantly</b> without downloading games:<br>
+            <b>1.</b> Open Discord (Desktop app or in your browser).<br>
+            <b>2.</b> Press <b>Ctrl + Shift + I</b>, then switch to the <b>Console</b> tab.<br>
+            <b>3.</b> Click below to copy the verified completer snippet, paste it into the console, and press Enter:
+          </div>
+          <button class="btn-primary" style="width: 100%; height: 36px; font-weight: 700;" onclick="copyQuestCompleterScript()">
+            📋 Copy Instant Quest Completer Script
+          </button>
+          <div id="questCopyStatus" style="font-size: 11px; color: var(--green); font-weight: 700; margin-top: 8px; display: none;">
+            ✓ Copied to clipboard! Paste into Discord Console (Ctrl + Shift + I) to complete your quests instantly.
+          </div>
+        </div>
+
         <div class="section-card">
           <div class="card-title">Auto-Quest Queue & Playlist</div>
           <div class="form-row" style="margin-bottom: 8px;">
@@ -1232,6 +1250,31 @@ async function leaveVoiceRoom() {
   document.getElementById('sidebarVoice').textContent = '○ Voice: Offline';
 }
 
+
+function copyQuestCompleterScript() {
+  const code = [
+    'let wpRequire;',
+    'window.webpackChunkdiscord_app.push([[Math.random()], {}, (req) => { wpRequire = req; }]);',
+    'const questsStore = Object.values(wpRequire.c).find(x => x?.exports?.default?.getQuest).exports.default;',
+    'const api = Object.values(wpRequire.c).find(x => x?.exports?.default?.post).exports.default;',
+    'const uncompleted = Object.values(questsStore.quests).filter(x => !x.userStatus?.completedAt);',
+    'console.log("[QUEST SPOOFER] Found " + uncompleted.length + " active quests!");',
+    'for (const q of uncompleted) {',
+    '    console.log("[QUEST SPOOFER] Completing quest: " + (q.config?.messages?.questName || q.id) + "...");',
+    '    await api.post({ url: "/quests/" + q.id + "/heartbeat", body: { stream_key: null, terminal: true } });',
+    '}',
+    'console.log("[QUEST SPOOFER] All active Discord quests successfully completed! Check your Gift Inventory.");'
+  ].join('\n');
+
+  navigator.clipboard.writeText(code);
+  const statusEl = document.getElementById('questCopyStatus');
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    setTimeout(() => { statusEl.style.display = 'none'; }, 6000);
+  }
+  appendWebLog('📋 Copied Instant Discord Quest Completer script to clipboard.');
+}
+
 /* CATALOG SEARCH */
 function searchCatalog() {
   const q = document.getElementById('catalogSearchInput').value.trim().toLowerCase();
@@ -1550,6 +1593,21 @@ export class DiscordAFKSession {
         await this.ctx.storage.put("emergencyLocked", true);
         await this.ctx.storage.put("inVoice", false);
         await this.ctx.storage.delete("activeChannelId");
+
+        // Forceful immediate disconnect via direct Discord REST API
+        if (token && this.guildId) {
+          try {
+            await fetch("https://discord.com/api/v10/guilds/" + this.guildId + "/voice-states/@me", {
+              method: "PATCH",
+              headers: {
+                "Authorization": token,
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0"
+              },
+              body: JSON.stringify({ channel_id: null })
+            });
+          } catch (e) {}
+        }
         return new Response(JSON.stringify({ ok: true, emergency_locked: true, status: "emergency_locked" }), { headers: { "Content-Type": "application/json" } });
       }
       if (body.action === "unlock_emergency") {
@@ -1562,6 +1620,21 @@ export class DiscordAFKSession {
         await this.ctx.storage.put("inVoice", false);
         this.activeChannelId = null;
         await this.ctx.storage.delete("activeChannelId");
+
+        // Forceful immediate disconnect via direct Discord REST API
+        if (token && this.guildId) {
+          try {
+            await fetch("https://discord.com/api/v10/guilds/" + this.guildId + "/voice-states/@me", {
+              method: "PATCH",
+              headers: {
+                "Authorization": token,
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0"
+              },
+              body: JSON.stringify({ channel_id: null })
+            });
+          } catch (e) {}
+        }
         return new Response(JSON.stringify({ ok: true, status: "left" }), { headers: { "Content-Type": "application/json" } });
       }
       if (this.emergencyLocked) {
