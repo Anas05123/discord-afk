@@ -1275,7 +1275,7 @@ function copyQuestCompleterScript() {
     '    await api.post({ url: "/quests/" + q.id + "/heartbeat", body: { stream_key: null, terminal: true } });',
     '}',
     'console.log("[QUEST SPOOFER] All active Discord quests successfully completed! Check your Gift Inventory.");'
-  ].join('\n');
+  ].join(String.fromCharCode(10));
 
   navigator.clipboard.writeText(code);
   const statusEl = document.getElementById('questCopyStatus');
