@@ -1,5 +1,5 @@
 /**
- * Discord Studio PRO — Full Web Application & 24/7 Cloudflare Durable Object Worker
+ * Discord Studio PRO  -  Full Web Application & 24/7 Cloudflare Durable Object Worker
  * Pixel-accurate replica of the Desktop Software (Activity Studio, Discord Quests, Voice Room AFK, Game Catalog, 24/7 Cloud)
  */
 
@@ -98,7 +98,7 @@ const PRESETS = {
     large_text: "VALORANT",
     small_image: "https://cdn-icons-png.flaticon.com/512/1055/1055672.png",
     small_text: "Match Point",
-    icon: "◈"
+    icon: ""
   },
   fortnite: {
     key: "fortnite",
@@ -110,7 +110,7 @@ const PRESETS = {
     large_text: "Fortnite",
     small_image: "https://cdn-icons-png.flaticon.com/512/1828/1828884.png",
     small_text: "1st Place",
-    icon: "◈"
+    icon: ""
   },
   roblox: {
     key: "roblox",
@@ -122,7 +122,7 @@ const PRESETS = {
     large_text: "ROBLOX",
     small_image: "https://cdn-icons-png.flaticon.com/512/727/727245.png",
     small_text: "Online",
-    icon: "◈"
+    icon: ""
   },
   genshin: {
     key: "genshin",
@@ -134,7 +134,7 @@ const PRESETS = {
     large_text: "Genshin Impact",
     small_image: "https://cdn-icons-png.flaticon.com/512/2997/2997295.png",
     small_text: "Adventure Rank 60",
-    icon: "◈"
+    icon: ""
   },
   chill: {
     key: "chill",
@@ -146,7 +146,7 @@ const PRESETS = {
     large_text: "Lo-Fi Coffee",
     small_image: "https://cdn-icons-png.flaticon.com/512/727/727245.png",
     small_text: "Chill Session",
-    icon: "◈"
+    icon: ""
   },
   studying: {
     key: "studying",
@@ -158,7 +158,7 @@ const PRESETS = {
     large_text: "Deep Study",
     small_image: "https://cdn-icons-png.flaticon.com/512/2997/2997295.png",
     small_text: "Pomodoro Focus",
-    icon: "◈"
+    icon: ""
   }
 };
 
@@ -167,7 +167,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Discord Studio Pro — Custom Presence & 24/7 AFK</title>
+<title>Discord Studio Pro  -  Custom Presence & 24/7 AFK</title>
 <style>
   :root {
     --bg-main: #0f1013;
@@ -210,6 +210,17 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
   }
   .nav-btn:hover { background: var(--bg-surface); color: var(--text-primary); }
   .nav-btn.active { background: var(--bg-surface); color: var(--text-primary); border-color: var(--blurple); }
+
+  .nav-icon { margin-right: 8px; vertical-align: middle; flex-shrink: 0; opacity: 0.8; }
+  .nav-btn:hover .nav-icon, .nav-btn.active .nav-icon { opacity: 1; stroke: var(--blurple); }
+  .status-indicator {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 6px; vertical-align: middle; flex-shrink: 0;
+  }
+  .status-indicator.online { background: #43b581; box-shadow: 0 0 6px rgba(67, 181, 129, 0.5); }
+  .status-indicator.offline { background: #747f8d; }
+  .status-indicator.locked { background: #f04747; box-shadow: 0 0 6px rgba(240, 71, 71, 0.5); }
+
 
   .sidebar-spacer { flex: 1; }
   .status-card {
@@ -366,7 +377,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 <div class="sidebar">
   <div class="brand-box">
     <div class="title-row">
-      <span class="logo-dot">●</span>
+      <span class="status-indicator online" style="margin-right:4px;"></span>
       <span class="app-title">Discord Studio</span>
       <span class="pro-badge">PRO</span>
     </div>
@@ -374,19 +385,19 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
   </div>
 
   <div class="nav-list">
-    <button class="nav-btn active" id="nav-activity" onclick="switchPage('activity')">◈ &nbsp;Activity Studio</button>
-    <button class="nav-btn" id="nav-quests" onclick="switchPage('quests')">◈ &nbsp;Discord Quests</button>
-    <button class="nav-btn" id="nav-voice" onclick="switchPage('voice')">◈ &nbsp;Voice Room AFK</button>
-    <button class="nav-btn" id="nav-games" onclick="switchPage('games')">◈ &nbsp;Game Catalog</button>
-    <button class="nav-btn" id="nav-cloud" onclick="switchPage('cloud')">◈ &nbsp;24/7 Cloud Guide</button>
+    <button class="nav-btn active" id="nav-activity" onclick="switchPage('activity')"><svg class="nav-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line></svg><span>Activity Studio</span></button>
+    <button class="nav-btn" id="nav-quests" onclick="switchPage('quests')"><svg class="nav-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg><span>Discord Quests</span></button>
+    <button class="nav-btn" id="nav-voice" onclick="switchPage('voice')"><svg class="nav-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg><span>Voice Room AFK</span></button>
+    <button class="nav-btn" id="nav-games" onclick="switchPage('games')"><svg class="nav-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" x2="10" y1="12" y2="12"></line><line x1="8" x2="8" y1="10" y2="14"></line><line x1="15" x2="15.01" y1="13" y2="13"></line><line x1="18" x2="18.01" y1="11" y2="11"></line><rect width="20" height="12" x="2" y="6" rx="2"></rect></svg><span>Game Catalog</span></button>
+    <button class="nav-btn" id="nav-cloud" onclick="switchPage('cloud')"><svg class="nav-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg><span>24/7 Cloud Guide</span></button>
   </div>
 
   <div class="sidebar-spacer"></div>
 
   <div class="status-card">
     <div class="status-header">SYSTEM STATUS</div>
-    <div class="status-item" id="sidebarRpc">● RPC: Active</div>
-    <div class="status-item" id="sidebarVoice">● Voice: In Room</div>
+    <div class="status-item" id="sidebarRpc"><span class="status-indicator online" id="dotSidebarRpc"></span>RPC: Active</div>
+    <div class="status-item" id="sidebarVoice"><span class="status-indicator online" id="dotSidebarVoice"></span>Voice: In Room</div>
   </div>
 </div>
 
@@ -471,7 +482,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
               <button class="btn-secondary" style="flex: 0 0 115px; height: 34px;" onclick="resetTimerNatural()">Reset (00:00)</button>
             </div>
             <div class="form-row">
-              <span style="font-size: 11px; color: var(--text-muted);">Custom Elapsed — Hours:</span>
+              <span style="font-size: 11px; color: var(--text-muted);">Custom Elapsed  -  Hours:</span>
               <input class="form-input" id="entryTimerHours" type="number" min="0" value="0" style="width: 60px;">
               <span style="font-size: 11px; color: var(--text-muted);">Minutes:</span>
               <input class="form-input" id="entryTimerMins" type="number" min="0" value="0" style="width: 60px;">
@@ -500,7 +511,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
           <label class="checkbox-row" style="font-weight: 700; margin-bottom: 6px;">
             <input type="checkbox" checked> Enable Auto-Detect Design Tools & Active Files
           </label>
-          <div style="font-size: 11px; color: var(--green);">● Status: Active & Synced with 24/7 Cloud Worker</div>
+          <div style="font-size: 11px; color: var(--green);">[ACTIVE] Status: Active & Synced with 24/7 Cloud Worker</div>
         </div>
       </div>
 
@@ -515,15 +526,15 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
                 <div class="avatar-circle" id="prevAvatarInitials">L</div>
                 <div>
                   <div class="popout-username" id="prevUsername">la2nis</div>
-                  <div class="popout-online">● Online (24/7 Cloud AFK)</div>
+                  <div class="popout-online"><span class="status-indicator online"></span>Online (24/7 Cloud AFK)</div>
                 </div>
               </div>
               <div class="popout-divider"></div>
               <div class="popout-section-lbl">PLAYING A GAME</div>
               <div class="activity-row">
                 <div class="art-canvas">
-                  <div class="large-art" id="prevLargeArt">◈</div>
-                  <div class="small-badge" id="prevSmallBadge" style="display:none;">◆</div>
+                  <div class="large-art" id="prevLargeArt" style="font-size:11px;font-weight:700;">APP</div>
+                  <div class="small-badge" id="prevSmallBadge" style="display:none;"></div>
                 </div>
                 <div class="act-info">
                   <div class="act-name" id="prevName">No Activity Set</div>
@@ -591,10 +602,10 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
       <div class="col-scroll">
         <div class="section-card">
           <div class="card-title">Live Quest Progress & Monitor</div>
-          <div id="lblQuestStatus" style="font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">○ Status: Idle (No game running)</div>
+          <div id="lblQuestStatus" style="font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">[IDLE] Status: Idle (No game running)</div>
           <div id="lblQuestGame" style="font-size: 12px; color: var(--text-secondary);">Active Game: None</div>
           <div id="lblQuestExe" style="font-size: 11px; color: var(--text-muted); margin: 2px 0;">Process Name: -</div>
-          <div id="lblQuestRpc" style="font-size: 11px; font-weight: 700; color: var(--text-muted);">Discord Activity: ○ Idle</div>
+          <div id="lblQuestRpc" style="font-size: 11px; font-weight: 700; color: var(--text-muted);">Discord Activity: [IDLE]</div>
 
           <div class="timer-box">
             <div class="timer-big" id="lblQuestTimer">00:00 / 15:00</div>
@@ -607,7 +618,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 
         <div class="section-card" style="border: 1px solid var(--blurple);">
           <div class="card-title" style="color: var(--blurple); display:flex; align-items:center; gap:6px;">
-            <span>⚡</span> Instant Discord Client Quest Completer
+            <span>[FAST]</span> Instant Discord Client Quest Completer
           </div>
           <div class="card-desc" style="font-size: 11px; line-height: 1.5;">
             Discord requires quests to report progress from a Discord client session. To complete <b>any active Quest instantly</b> without downloading games:<br>
@@ -616,10 +627,10 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             <b>3.</b> Click below to copy the verified completer snippet, paste it into the console, and press Enter:
           </div>
           <button class="btn-primary" style="width: 100%; height: 36px; font-weight: 700;" onclick="copyQuestCompleterScript()">
-            📋 Copy Instant Quest Completer Script
+            Copy Instant Quest Completer Script
           </button>
           <div id="questCopyStatus" style="font-size: 11px; color: var(--green); font-weight: 700; margin-top: 8px; display: none;">
-            ✓ Copied to clipboard! Paste into Discord Console (Ctrl + Shift + I) to complete your quests instantly.
+            [OK] Copied to clipboard! Paste into Discord Console (Ctrl + Shift + I) to complete your quests instantly.
           </div>
         </div>
 
@@ -668,7 +679,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
               <button class="btn-secondary" style="height:24px; padding:0 10px; font-size:10px;" onclick="loadUserGuilds()">Load My Servers</button>
             </div>
             <select class="form-select" id="selectGuildDropdown" onchange="onGuildDropdownChange(this.value)" style="margin-bottom:6px;">
-              <option value="1442511921898192917">★ Main Server (1442511921898192917)</option>
+              <option value="1442511921898192917">Main Server (1442511921898192917)</option>
             </select>
             <input class="form-input" id="entryGuildId" value="1442511921898192917" placeholder="Server ID (Guild ID)">
           </div>
@@ -679,17 +690,17 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
               <button class="btn-secondary" style="height:24px; padding:0 10px; font-size:10px;" onclick="loadGuildVoiceChannels()">Refresh Voice Rooms</button>
             </div>
             <select class="form-select" id="selectChannelDropdown" onchange="onChannelDropdownChange(this.value)" style="margin-bottom:6px;">
-              <option value="1484570674659070063">◈ ➕・JOIN TO CREATE (Auto-Creates Your Room) — 1484570674659070063</option>
-              <option value="1442511922565091382">◈ 🏢・Main Lobby — 1442511922565091382</option>
-              <option value="1475888620630966322">◈ 🕌︱Quran Broadcast — 1475888620630966322</option>
-              <option value="1482608241316729035">◈ 📚・Study Lounge — 1482608241316729035</option>
-              <option value="1446993760977289276">◈ 🎸・Music Room — 1446993760977289276</option>
-              <option value="1447784971023421663">◈ 🍿・Movie Time — 1447784971023421663</option>
-              <option value="1460725269806584081">◈ 🗿・Lone Ranger — 1460725269806584081</option>
-              <option value="1460725809600925706">◈ 🎸・Rock & Roll — 1460725809600925706</option>
-              <option value="1460726493490577613">◈ 🎯・Three Musketeers — 1460726493490577613</option>
-              <option value="1482580750267056269">◈ ✨・Five Stars — 1482580750267056269</option>
-              <option value="1496634010980319263">◈ 🧬・Fantastic Four — 1496634010980319263</option>
+              <option value="1484570674659070063">+ JOIN TO CREATE (Auto-Creates Your Room)  -  1484570674659070063</option>
+              <option value="1442511922565091382">Main Lobby  -  1442511922565091382</option>
+              <option value="1475888620630966322"> Quran Broadcast  -  1475888620630966322</option>
+              <option value="1482608241316729035">Study Lounge  -  1482608241316729035</option>
+              <option value="1446993760977289276">Music Room  -  1446993760977289276</option>
+              <option value="1447784971023421663">Movie Time  -  1447784971023421663</option>
+              <option value="1460725269806584081">Lone Ranger  -  1460725269806584081</option>
+              <option value="1460725809600925706">Rock & Roll  -  1460725809600925706</option>
+              <option value="1460726493490577613">Three Musketeers  -  1460726493490577613</option>
+              <option value="1482580750267056269">Five Stars  -  1482580750267056269</option>
+              <option value="1496634010980319263">Fantastic Four  -  1496634010980319263</option>
             </select>
             <input class="form-input" id="entryChannelId" value="1484570674659070063" placeholder="Voice Channel ID (or pick from dropdown above)">
           </div>
@@ -708,15 +719,15 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
           </div>
           <button class="btn-green" id="btnJoinVoice" style="width: 100%; height: 42px; font-size: 13px; margin-bottom: 8px;" onclick="joinVoiceRoom()">Join Voice Room (24/7 AFK)</button>
           <button class="btn-red" style="width: 100%; height: 34px; font-size: 11px; margin-bottom: 8px;" onclick="leaveVoiceRoom()">Leave Voice Room</button>
-          <button class="btn-red" style="width: 100%; height: 38px; font-size: 11px; font-weight: 700; background: #8B0000; margin-bottom: 6px;" onclick="triggerEmergencyKillswitch()">⛔ EMERGENCY KILLSWITCH (Force Leave & Lock)</button>
-          <button class="btn-secondary" style="width: 100%; height: 30px; font-size: 11px;" onclick="resetEmergencyLock()">🔓 Reset Emergency Lock</button>
+          <button class="btn-red" style="width: 100%; height: 38px; font-size: 11px; font-weight: 700; background: #8B0000; margin-bottom: 6px;" onclick="triggerEmergencyKillswitch()">EMERGENCY KILLSWITCH (Force Leave & Lock)</button>
+          <button class="btn-secondary" style="width: 100%; height: 30px; font-size: 11px;" onclick="resetEmergencyLock()">Reset Emergency Lock</button>
         </div>
       </div>
 
       <div class="col-scroll">
         <div class="section-card">
           <div class="card-title">Live Room Telemetry</div>
-          <div id="monStatus" style="font-size: 13px; font-weight: 700; color: var(--green); margin-bottom: 6px;">● Status: Connected & In Voice Room (24/7 Cloud)</div>
+          <div id="monStatus" style="font-size: 13px; font-weight: 700; color: var(--green); margin-bottom: 6px;">[CONNECTED] Status: Connected & In Voice Room (24/7 Cloud)</div>
           <div id="monUser" style="font-size: 12px; color: var(--text-secondary); margin: 4px 0;">Account: la2nis</div>
           <div id="monRoom" style="font-size: 12px; color: var(--text-muted); margin: 4px 0;">Active Voice Channel: 1484570674659070063</div>
           <div id="monUptime" style="font-size: 12px; color: var(--text-muted); margin: 4px 0;">Session Uptime: 00:00:00</div>
@@ -759,11 +770,11 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
         <div class="card-title">24/7 Cloud Hosting Engine</div>
         <div class="card-desc" style="font-size: 12px; color: var(--text-secondary);">
           Your Discord Studio Pro instance is actively hosted on Cloudflare's global edge network using a persistent Durable Object with a 25-second internal heartbeat alarm.<br><br>
-          • <b>Status:</b> ● Online 24/7 (Zero PC power required)<br>
-          • <b>Session Longevity:</b> Designed to run 1+ day continuously without disconnecting<br>
-          • <b>Handover Protocol:</b> Seamless runner takeover without voice channel recreation<br>
-          • <b>Anti-Glitch Engine:</b> Sliding window circuit breaker strictly prevents channel creation spam<br>
-          • <b>Voice Mode:</b> Self-Muted & Self-Deafened (Zero Bandwidth)
+          - <b>Status:</b>  Online 24/7 (Zero PC power required)<br>
+          - <b>Session Longevity:</b> Designed to run 1+ day continuously without disconnecting<br>
+          - <b>Handover Protocol:</b> Seamless runner takeover without voice channel recreation<br>
+          - <b>Anti-Glitch Engine:</b> Sliding window circuit breaker strictly prevents channel creation spam<br>
+          - <b>Voice Mode:</b> Self-Muted & Self-Deafened (Zero Bandwidth)
         </div>
       </div>
     </div>
@@ -775,7 +786,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 const PRESETS_DATA = ${JSON.stringify(PRESETS)};
 
 const BADGES_DATA = [
-  { id: "none", name: "No Badge", emoji: "—", tooltip: "Clean Activity", url: "" },
+  { id: "none", name: "No Badge", emoji: " - ", tooltip: "Clean Activity", url: "" },
   { id: "photoshop", name: "Photoshop", emoji: "Ps", tooltip: "Adobe Photoshop CC", url: "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/PHXS.png" },
   { id: "illustrator", name: "Illustrator", emoji: "Ai", tooltip: "Adobe Illustrator CC", url: "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/ILST.png" },
   { id: "aftereffects", name: "After Effects", emoji: "Ae", tooltip: "Adobe After Effects CC", url: "https://raw.githubusercontent.com/teeteeteeteetee/adobe-discord-rpc/master/src/assets/AEFT.png" },
@@ -794,21 +805,21 @@ const BADGES_DATA = [
 ];
 
 const QUEST_GAMES_DATA = [
-  { id: "oncehuman", name: "Once Human", exe: "once human/once_human.exe", client_id: "1260340082150346932", emoji: "◈", desc: "Active Quest: 15m for 700 Orbs" },
-  { id: "fc27", name: "EA SPORTS FC™ 27", exe: "ea sports fc 27/fc27.exe", client_id: "1531874756096295054", emoji: "◈", desc: "Active Quest: 15m for 700 Orbs (Select PC)" },
-  { id: "marvelrivals", name: "Marvel Rivals", exe: "win64/marvel.exe", client_id: "1314395942253756416", emoji: "◈", desc: "6v6 Super Hero Team Shooter" },
-  { id: "deltaforce", name: "Delta Force", exe: "win64/deltaforceclient-win64-shipping.exe", client_id: "1314682894106497096", emoji: "◈", desc: "Tactical First-Person Shooter" },
-  { id: "ror2", name: "Risk of Rain 2", exe: "risk of rain 2/risk of rain 2.exe", client_id: "1402418087793528862", emoji: "◈", desc: "Multiplayer Roguelike" },
-  { id: "wherewindsmeet", name: "Where Winds Meet", exe: "where winds meet/wherewindsmeet.exe", client_id: "1437509662303059998", emoji: "◈", desc: "Wuxia Open-World RPG" },
-  { id: "gta6", name: "Grand Theft Auto VI", exe: "gta6.exe", client_id: "1445160676522856458", emoji: "◈", desc: "Rockstar Games Next-Gen Open World" },
-  { id: "nte", name: "Neverness to Everness (NTE)", exe: "htgame.exe", client_id: "1470616226995765409", emoji: "◈", desc: "Anime Open-World RPG" },
-  { id: "giants", name: "March of Giants", exe: "thelineclient-win64-shipping.exe", client_id: "1428223713928810496", emoji: "◈", desc: "War Strategy MOBA" },
-  { id: "hellraiser", name: "Clive Barker's Hellraiser: Revival", exe: "hellraiser-win64-shipping.exe", client_id: "1552168352116641822", emoji: "◈", desc: "Horror Survival" },
-  { id: "helldivers2", name: "HELLDIVERS 2", exe: "helldivers2.exe", client_id: "1198592398579482654", emoji: "◈", desc: "Galactic Co-Op Shooter" },
-  { id: "genshin", name: "Genshin Impact", exe: "genshinimpact.exe", client_id: "762434991303950386", emoji: "◈", desc: "Open-World Action RPG" },
-  { id: "valorant", name: "VALORANT", exe: "valorant.exe", client_id: "700136079562375258", emoji: "◈", desc: "5v5 Tactical Shooter" },
-  { id: "fortnite", name: "Fortnite", exe: "fortniteclient-win64-shipping.exe", client_id: "432980957394370572", emoji: "◈", desc: "Battle Royale" },
-  { id: "cyberpunk", name: "Cyberpunk 2077", exe: "cyberpunk2077.exe", client_id: "658056503651106837", emoji: "◈", desc: "Night City RPG" }
+  { id: "oncehuman", name: "Once Human", exe: "once human/once_human.exe", client_id: "1260340082150346932", emoji: "", desc: "Active Quest: 15m for 700 Orbs" },
+  { id: "fc27", name: "EA SPORTS FC 27", exe: "ea sports fc 27/fc27.exe", client_id: "1531874756096295054", emoji: "", desc: "Active Quest: 15m for 700 Orbs (Select PC)" },
+  { id: "marvelrivals", name: "Marvel Rivals", exe: "win64/marvel.exe", client_id: "1314395942253756416", emoji: "", desc: "6v6 Super Hero Team Shooter" },
+  { id: "deltaforce", name: "Delta Force", exe: "win64/deltaforceclient-win64-shipping.exe", client_id: "1314682894106497096", emoji: "", desc: "Tactical First-Person Shooter" },
+  { id: "ror2", name: "Risk of Rain 2", exe: "risk of rain 2/risk of rain 2.exe", client_id: "1402418087793528862", emoji: "", desc: "Multiplayer Roguelike" },
+  { id: "wherewindsmeet", name: "Where Winds Meet", exe: "where winds meet/wherewindsmeet.exe", client_id: "1437509662303059998", emoji: "", desc: "Wuxia Open-World RPG" },
+  { id: "gta6", name: "Grand Theft Auto VI", exe: "gta6.exe", client_id: "1445160676522856458", emoji: "", desc: "Rockstar Games Next-Gen Open World" },
+  { id: "nte", name: "Neverness to Everness (NTE)", exe: "htgame.exe", client_id: "1470616226995765409", emoji: "", desc: "Anime Open-World RPG" },
+  { id: "giants", name: "March of Giants", exe: "thelineclient-win64-shipping.exe", client_id: "1428223713928810496", emoji: "", desc: "War Strategy MOBA" },
+  { id: "hellraiser", name: "Clive Barker's Hellraiser: Revival", exe: "hellraiser-win64-shipping.exe", client_id: "1552168352116641822", emoji: "", desc: "Horror Survival" },
+  { id: "helldivers2", name: "HELLDIVERS 2", exe: "helldivers2.exe", client_id: "1198592398579482654", emoji: "", desc: "Galactic Co-Op Shooter" },
+  { id: "genshin", name: "Genshin Impact", exe: "genshinimpact.exe", client_id: "762434991303950386", emoji: "", desc: "Open-World Action RPG" },
+  { id: "valorant", name: "VALORANT", exe: "valorant.exe", client_id: "700136079562375258", emoji: "", desc: "5v5 Tactical Shooter" },
+  { id: "fortnite", name: "Fortnite", exe: "fortniteclient-win64-shipping.exe", client_id: "432980957394370572", emoji: "", desc: "Battle Royale" },
+  { id: "cyberpunk", name: "Cyberpunk 2077", exe: "cyberpunk2077.exe", client_id: "658056503651106837", emoji: "", desc: "Night City RPG" }
 ];
 
 let startTimestampMs = Date.now();
@@ -848,7 +859,7 @@ function initGrids() {
       <div class="quest-emoji">\${g.emoji}</div>
       <div class="quest-info">
         <div class="quest-title">\${g.name}</div>
-        <div class="quest-sub">\${g.desc} • \${g.exe}</div>
+        <div class="quest-sub">\${g.desc} | \${g.exe}</div>
       </div>
       <button class="btn-secondary" style="flex: 0 0 75px; height: 30px;" onclick='addQuestToQueue(\${JSON.stringify(g)})'>+ Queue</button>
       <button class="btn-primary" style="height: 30px; font-size: 11px; padding: 0 12px;" onclick='startQuestSpoof(\${JSON.stringify(g)})'>Launch Spoof</button>
@@ -900,9 +911,9 @@ function updatePreview() {
 
   const largeBox = document.getElementById('prevLargeArt');
   if (largeImg.startsWith('http')) {
-    largeBox.innerHTML = \`<img src="\${largeImg}" onerror="this.parentElement.textContent='◈'">\`;
+    largeBox.innerHTML = \`<img src="\${largeImg}" onerror="this.parentElement.textContent='APP'">\`;
   } else {
-    largeBox.textContent = hasAny ? '◈' : '◈';
+    largeBox.textContent = hasAny ? 'APP' : 'APP';
   }
 
   const smallBox = document.getElementById('prevSmallBadge');
@@ -911,9 +922,9 @@ function updatePreview() {
   } else {
     smallBox.style.display = 'flex';
     if (smallImg.startsWith('http')) {
-      smallBox.innerHTML = \`<img src="\${smallImg}" onerror="this.parentElement.textContent='◆'">\`;
+      smallBox.innerHTML = \`<img src="\${smallImg}" onerror="this.parentElement.textContent=''">\`;
     } else {
-      smallBox.textContent = '◆';
+      smallBox.textContent = '';
     }
   }
 
@@ -1005,17 +1016,17 @@ async function clearPresence() {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({ clear: true, name: '', details: '', state: '', application_id: '', client_id: '', large_image: '', large_text: '', small_image: '', small_text: '', key: '' })
   });
-  document.getElementById('sidebarRpc').textContent = '○ RPC: Cleared';
+  document.getElementById('sidebarRpc').innerHTML = '<span class="status-indicator offline"></span>RPC: Cleared';
 }
 
 /* QUEST SPOOFER & AUTO-QUEUE */
 function startQuestSpoof(g) {
   questElapsed = 0;
-  document.getElementById('lblQuestStatus').textContent = '● Playing: ' + g.name;
+  document.getElementById('lblQuestStatus').textContent = '[PLAYING] ' + g.name;
   document.getElementById('lblQuestStatus').style.color = 'var(--green)';
   document.getElementById('lblQuestGame').textContent = 'Active Game: ' + g.name;
   document.getElementById('lblQuestExe').textContent = 'Process: ' + g.exe + ' (Cloud Simulated)';
-  document.getElementById('lblQuestRpc').textContent = 'Discord Activity: ● Playing ' + g.name;
+  document.getElementById('lblQuestRpc').textContent = 'Discord Activity: [PLAYING] ' + g.name;
   document.getElementById('lblQuestRpc').style.color = 'var(--green)';
 
   fetch('/api/activity', {
@@ -1045,7 +1056,7 @@ function startQuestSpoof(g) {
         skipQuestQueue();
       } else {
         clearInterval(questInterval);
-        document.getElementById('lblQuestStatus').textContent = '✓ 15-Minute Quest Completed! Claim your reward in Discord.';
+        document.getElementById('lblQuestStatus').textContent = '[DONE] 15-Minute Quest Completed! Claim your reward in Discord.';
       }
     }
   }, 1000);
@@ -1054,11 +1065,11 @@ function startQuestSpoof(g) {
 function stopQuestSpoofer() {
   if (questInterval) clearInterval(questInterval);
   activeQuestIdx = -1;
-  document.getElementById('lblQuestStatus').textContent = '○ Status: Idle (No game running)';
+  document.getElementById('lblQuestStatus').textContent = '[IDLE] Status: Idle (No game running)';
   document.getElementById('lblQuestStatus').style.color = 'var(--text-muted)';
   document.getElementById('lblQuestGame').textContent = 'Active Game: None';
   document.getElementById('lblQuestExe').textContent = 'Process Name: -';
-  document.getElementById('lblQuestRpc').textContent = 'Discord Activity: ○ Idle';
+  document.getElementById('lblQuestRpc').textContent = 'Discord Activity: [IDLE]';
   document.getElementById('questProgressBar').style.width = '0%';
   applyActivity();
 }
@@ -1083,9 +1094,9 @@ function renderQuestQueue() {
   }
   box.innerHTML = questQueue.map((item, i) => \`
     <div class="queue-item">
-      <span><b>\${i+1}.</b> \${item.game.emoji || '🎮'} \${item.game.name}</span>
+      <span><b>\${i+1}.</b> \${item.game.name} \${item.game.name}</span>
       <span style="color: \${item.status==='running'?'var(--green)':item.status==='done'?'var(--blurple)':'var(--text-muted)'}; font-weight:700;">
-        \${item.status==='running'?'● In Progress':item.status==='done'?'✓ Complete':'○ Queued'}
+        \${item.status==='running'?'[ACTIVE] In Progress':item.status==='done'?'[DONE] Complete':'[QUEUE] Queued'}
       </span>
     </div>
   \`).join('');
@@ -1117,7 +1128,7 @@ function skipQuestQueue() {
     activeQuestIdx = -1;
     renderQuestQueue();
     stopQuestSpoofer();
-    document.getElementById('lblQuestStatus').textContent = '✓ All Queued Quests Finished! Ready to claim.';
+    document.getElementById('lblQuestStatus').textContent = '[DONE] All Queued Quests Finished! Ready to claim.';
     document.getElementById('lblQuestStatus').style.color = 'var(--green)';
   }
 }
@@ -1136,27 +1147,27 @@ function launchCustomQuest() {
   const raw = document.getElementById('customQuestExe').value.trim();
   if (!raw) return;
   const exe = raw.endsWith('.exe') ? raw : raw.toLowerCase().replace(/\\s+/g, '') + '.exe';
-  startQuestSpoof({ id: 'custom', name: raw.replace('.exe', ''), exe, client_id: '1470616226995765409', emoji: '◈' });
+  startQuestSpoof({ id: 'custom', name: raw.replace('.exe', ''), exe, client_id: '1470616226995765409', emoji: '' });
 }
 
 function queueCustomQuest() {
   const raw = document.getElementById('customQuestExe').value.trim();
   if (!raw) return;
   const exe = raw.endsWith('.exe') ? raw : raw.toLowerCase().replace(/\\s+/g, '') + '.exe';
-  addQuestToQueue({ id: 'custom_' + Date.now(), name: raw.replace('.exe', ''), exe, client_id: '1470616226995765409', emoji: '◈' });
+  addQuestToQueue({ id: 'custom_' + Date.now(), name: raw.replace('.exe', ''), exe, client_id: '1470616226995765409', emoji: '' });
 }
 
 function searchQuestGame() {
   const q = document.getElementById('questSearchInput').value.trim().toLowerCase();
   if (!q) return;
   const matches = QUEST_GAMES_DATA.filter(g => g.name.toLowerCase().includes(q) || g.exe.toLowerCase().includes(q) || g.id.includes(q));
-  const list = matches.length ? matches : [{ id: q, name: q.toUpperCase(), exe: q.replace(/\\s+/g, '') + '.exe', client_id: '1470616226995765409', emoji: '◈', desc: 'Detected Game' }];
+  const list = matches.length ? matches : [{ id: q, name: q.toUpperCase(), exe: q.replace(/\\s+/g, '') + '.exe', client_id: '1470616226995765409', emoji: '', desc: 'Detected Game' }];
   document.getElementById('questSearchResults').innerHTML = list.map(g => \`
     <div class="quest-row" style="margin-top:6px;">
       <div class="quest-emoji">\${g.emoji}</div>
       <div class="quest-info">
         <div class="quest-title">\${g.name}</div>
-        <div class="quest-sub">Executable: \${g.exe} • App ID: \${g.client_id}</div>
+        <div class="quest-sub">Executable: \${g.exe} | App ID: \${g.client_id}</div>
       </div>
       <button class="btn-green" style="height:28px; padding:0 10px; font-size:11px;" onclick='startQuestSpoof(\${JSON.stringify(g)})'>Spoof Now</button>
     </div>
@@ -1190,7 +1201,7 @@ async function loadGuildVoiceChannels(gidOverride) {
     if (d.channels && d.channels.length) {
       const sel = document.getElementById('selectChannelDropdown');
       const currentCid = document.getElementById('entryChannelId').value.trim();
-      sel.innerHTML = d.channels.map(c => \`<option value="\${c.id}" \${c.id === currentCid ? 'selected' : ''}>🔊 \${c.name} — \${c.id}</option>\`).join('');
+      sel.innerHTML = d.channels.map(c => \`<option value="\${c.id}" \${c.id === currentCid ? 'selected' : ''}>#  \${c.name}  -  \${c.id}</option>\`).join('');
       if (!d.channels.some(c => c.id === currentCid)) {
         const jtc = d.channels.find(c => c.name.toUpperCase().includes('JOIN TO CREATE')) || d.channels[0];
         if (jtc) {
@@ -1215,7 +1226,7 @@ async function joinVoiceRoom() {
   const actName = document.getElementById('entryVoiceActivity').value.trim();
   const btn = document.getElementById('btnJoinVoice');
   if (btn) btn.textContent = 'Connecting & Joining Voice Room...';
-  document.getElementById('monStatus').textContent = '● Connecting to Voice Channel in Discord...';
+  document.getElementById('monStatus').textContent = '[CONNECTING] Connecting to Voice Channel in Discord...';
   document.getElementById('monStatus').style.color = 'var(--yellow)';
 
   try {
@@ -1227,12 +1238,12 @@ async function joinVoiceRoom() {
     const d = await r.json();
     const activeChan = d.channel_id || channel_id;
     const chanLabel = d.channel_name ? \`\${d.channel_name} (\${activeChan})\` : activeChan;
-    document.getElementById('monStatus').textContent = '● Status: Connected & In Voice Room: ' + chanLabel;
+    document.getElementById('monStatus').textContent = '[CONNECTED] Status: Connected & In Voice Room: ' + chanLabel;
     document.getElementById('monStatus').style.color = 'var(--green)';
     document.getElementById('monRoom').textContent = 'Active Voice Channel: ' + chanLabel;
-    document.getElementById('sidebarVoice').textContent = '● Voice: In Room';
+    document.getElementById('sidebarVoice').innerHTML = '<span class="status-indicator online"></span>Voice: In Room';
   } catch (e) {
-    document.getElementById('monStatus').textContent = '● Error joining voice room: ' + e;
+    document.getElementById('monStatus').textContent = '[ERROR] Error joining voice room: ' + e;
     document.getElementById('monStatus').style.color = 'var(--red)';
   } finally {
     if (btn) btn.textContent = 'Join Voice Room (24/7 AFK)';
@@ -1245,9 +1256,9 @@ async function leaveVoiceRoom() {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({ action: 'leave' })
   });
-  document.getElementById('monStatus').textContent = '⚪ Status: Disconnected from Voice';
+  document.getElementById('monStatus').textContent = ' Status: Disconnected from Voice';
   document.getElementById('monStatus').style.color = 'var(--text-muted)';
-  document.getElementById('sidebarVoice').textContent = '○ Voice: Offline';
+  document.getElementById('sidebarVoice').innerHTML = '<span class="status-indicator offline"></span>Voice: Offline';
 }
 
 
@@ -1272,7 +1283,7 @@ function copyQuestCompleterScript() {
     statusEl.style.display = 'block';
     setTimeout(() => { statusEl.style.display = 'none'; }, 6000);
   }
-  appendWebLog('📋 Copied Instant Discord Quest Completer script to clipboard.');
+  appendWebLog('[OK] Copied Instant Discord Quest Completer script to clipboard.');
 }
 
 /* CATALOG SEARCH */
@@ -1288,7 +1299,7 @@ function searchCatalog() {
       <div class="quest-emoji">\${m.icon}</div>
       <div class="quest-info">
         <div class="quest-title">\${m.name}</div>
-        <div class="quest-sub">App ID: \${m.id} • \${m.cat}</div>
+        <div class="quest-sub">App ID: \${m.id} | \${m.cat}</div>
       </div>
       <button class="btn-primary" style="height:28px; font-size:11px; padding:0 12px;" onclick="useCatalogItem('\${m.id}', '\${m.name.replace(/'/g, "")}')">Use ID</button>
     </div>
@@ -1324,9 +1335,9 @@ async function refreshTelemetry() {
     const r = await fetch('/health');
     const d = await r.json();
     if (d.emergency_locked) {
-      document.getElementById('monStatus').textContent = '⛔ Status: EMERGENCY LOCKED (All Joins Blocked)';
+      document.getElementById('monStatus').textContent = '[LOCKED] Status: EMERGENCY LOCKED (All Joins Blocked)';
       document.getElementById('monStatus').style.color = 'var(--red)';
-      document.getElementById('sidebarVoice').textContent = '⛔ Voice: LOCKED';
+      document.getElementById('sidebarVoice').innerHTML = '<span class="status-indicator locked"></span>Voice: LOCKED';
       document.getElementById('sidebarVoice').className = 'status-item inactive';
     }
     if (d.account) {
@@ -1364,7 +1375,7 @@ async function refreshTelemetry() {
       ].some(id => document.activeElement === document.getElementById(id));
 
       if (isCleared) {
-        document.getElementById('sidebarRpc').textContent = '○ RPC: Cleared';
+        document.getElementById('sidebarRpc').innerHTML = '<span class="status-indicator offline"></span>RPC: Cleared';
         if (!isTyping) {
           document.getElementById('entryClientId').value = '';
           document.getElementById('entryDetails').value = '';
@@ -1377,7 +1388,7 @@ async function refreshTelemetry() {
           updatePreview();
         }
       } else {
-        document.getElementById('sidebarRpc').textContent = '● RPC: Active';
+        document.getElementById('sidebarRpc').innerHTML = '<span class="status-indicator online"></span>RPC: Active';
         if (!isTyping) {
           if (act.client_id || act.application_id) document.getElementById('entryClientId').value = act.client_id || act.application_id;
           if (act.details !== undefined) document.getElementById('entryDetails').value = act.details;
@@ -1409,7 +1420,7 @@ setInterval(refreshTelemetry, 6000);
 </html>`;
 
 const DELETED_OLD_CHANNELS = new Set(["1557661172990480487", "1559013974500966420"]);
-const DEFAULT_JTC_CHANNEL = "1484570674659070063"; // ➕・JOIN TO CREATE in 1442511921898192917
+const DEFAULT_JTC_CHANNEL = "1484570674659070063"; // + JOIN TO CREATE in 1442511921898192917
 
 export class DiscordAFKSession {
   constructor(ctx, env) {
@@ -1426,7 +1437,7 @@ export class DiscordAFKSession {
     const envChan = env.CHANNEL_ID && !DELETED_OLD_CHANNELS.has(String(env.CHANNEL_ID)) ? String(env.CHANNEL_ID) : DEFAULT_JTC_CHANNEL;
     this.channelId = envChan;
     this.activeChannelId = null;
-    this.channelName = "➕・JOIN TO CREATE";
+    this.channelName = "+ JOIN TO CREATE";
     this.selfMute = true;
     this.selfDeaf = true;
     this.activity = { cleared: true, name: "", details: "", state: "", application_id: "", client_id: "" };
@@ -1754,7 +1765,7 @@ export class DiscordAFKSession {
     const longevitySec = Math.max(0, Math.floor((Date.now() - this.sessionStartMs) / 1000));
     return new Response(JSON.stringify({
       status: this.emergencyLocked ? "emergency_locked" : (this.inVoice ? "online" : "connected"),
-      service: "Discord Studio PRO — 24/7 Cloud Worker (v10 Modern)",
+      service: "Discord Studio PRO  -  24/7 Cloud Worker (v10 Modern)",
       version: "v10-modern",
       account: this.username,
       emergency_locked: Boolean(this.emergencyLocked),
