@@ -50,7 +50,8 @@ class MainWindow(ctk.CTk):
         self.voice_afk = VoiceAFKClient(
             on_status=self._on_voice_status,
             on_ready=self._on_voice_ready,
-            on_latency=self._on_voice_latency
+            on_latency=self._on_voice_latency,
+            on_log=self._append_voice_log
         )
         self.detector = ProcessDetector(
             detect_rules=self.config_mgr.get("detect_rules", []),
@@ -1177,6 +1178,30 @@ class MainWindow(ctk.CTk):
         )
         self.btn_leave_voice.pack(fill="x")
 
+        self.btn_emergency_kill = ctk.CTkButton(
+            act_box,
+            text="⛔ EMERGENCY KILLSWITCH: FORCE LEAVE & LOCK",
+            height=38,
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            fg_color="#8B0000",
+            hover_color="#5a0000",
+            corner_radius=8,
+            command=self._on_emergency_killswitch
+        )
+        self.btn_emergency_kill.pack(fill="x", pady=(8, 4))
+
+        self.btn_unlock_emergency = ctk.CTkButton(
+            act_box,
+            text="🔓 Reset Emergency Lock",
+            height=30,
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            fg_color="#373c4a",
+            hover_color="#4752c4",
+            corner_radius=8,
+            command=self._on_unlock_emergency
+        )
+        self.btn_unlock_emergency.pack(fill="x")
+
         # Right Column: Telemetry Card
         right_panel = ctk.CTkFrame(page, fg_color="transparent")
         right_panel.grid(row=1, column=1, sticky="nsew", padx=(10, 20), pady=(0, 16))
@@ -1197,6 +1222,32 @@ class MainWindow(ctk.CTk):
 
         self.lbl_mon_latency = ctk.CTkLabel(m_card, text="Heartbeat Latency: - ms", font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"), text_color=COLOR_GREEN, anchor="w")
         self.lbl_mon_latency.pack(fill="x", padx=14, pady=(2, 14))
+
+        # Live Event & Safety Console Card
+        log_card = self._create_section_card(right_panel, "Live Event & Safety Console")
+        self.txt_voice_logs = ctk.CTkTextbox(
+            log_card,
+            height=130,
+            font=ctk.CTkFont(family="Consolas", size=11),
+            fg_color="#0d0e11",
+            text_color="#23a55a",
+            wrap="word",
+            corner_radius=6
+        )
+        self.txt_voice_logs.pack(fill="both", expand=True, padx=14, pady=(6, 6))
+
+        log_btn_box = ctk.CTkFrame(log_card, fg_color="transparent")
+        log_btn_box.pack(fill="x", padx=14, pady=(0, 8))
+        ctk.CTkButton(
+            log_btn_box,
+            text="Clear Console",
+            height=24,
+            width=90,
+            font=ctk.CTkFont(family="Segoe UI", size=10),
+            fg_color="#262933",
+            hover_color="#373c4a",
+            command=lambda: self.txt_voice_logs.delete("1.0", "end")
+        ).pack(side="right")
 
         return page
 
@@ -1824,6 +1875,53 @@ class MainWindow(ctk.CTk):
         self.lbl_mon_status.configure(text="⚪ Status: Disconnected", text_color=TEXT_MUTED)
         self.lbl_mon_latency.configure(text="Heartbeat Latency: - ms")
         self.lbl_sidebar_voice.configure(text="○ Voice: Offline", text_color=TEXT_MUTED)
+
+    def _append_voice_log(self, text: str):
+        def _u():
+            if hasattr(self, "txt_voice_logs") and self.txt_voice_logs:
+                self.txt_voice_logs.insert("end", text + "\n")
+                self.txt_voice_logs.see("end")
+        self.after(0, _u)
+
+    def _on_emergency_killswitch(self):
+        self._voice_uptime_running = False
+        self.voice_afk.emergency_killswitch("User triggered emergency killswitch")
+        self.btn_join_voice.configure(state="normal")
+        self.btn_leave_voice.configure(state="disabled")
+        self.lbl_mon_status.configure(text="⛔ Status: EMERGENCY LOCKED (All Joins Blocked)", text_color="#da373c")
+        self.lbl_mon_latency.configure(text="Heartbeat Latency: - ms")
+        self.lbl_sidebar_voice.configure(text="⛔ Voice: LOCKED", text_color="#da373c")
+        threading.Thread(target=self._notify_cloud_emergency, daemon=True).start()
+
+    def _on_unlock_emergency(self):
+        self.voice_afk.unlock_emergency()
+        self.lbl_mon_status.configure(text="○ Status: Disconnected (Safety lock reset)", text_color=TEXT_MUTED)
+        self.lbl_sidebar_voice.configure(text="○ Voice: Offline", text_color=TEXT_MUTED)
+        threading.Thread(target=self._notify_cloud_unlock, daemon=True).start()
+
+    def _notify_cloud_emergency(self):
+        try:
+            import urllib.request
+            req = urllib.request.Request(
+                "https://discord-afk-keepalive.anas05123.workers.dev/api/voice",
+                data=b'{"action":"emergency_killswitch","reason":"Desktop UI killswitch"}',
+                headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+            )
+            urllib.request.urlopen(req, timeout=4)
+        except Exception:
+            pass
+
+    def _notify_cloud_unlock(self):
+        try:
+            import urllib.request
+            req = urllib.request.Request(
+                "https://discord-afk-keepalive.anas05123.workers.dev/api/voice",
+                data=b'{"action":"unlock_emergency"}',
+                headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+            )
+            urllib.request.urlopen(req, timeout=4)
+        except Exception:
+            pass
 
     def _on_voice_status(self, msg: str, connected: bool):
         def _u():

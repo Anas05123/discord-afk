@@ -104,6 +104,10 @@ class AntiGlitchGuard {
   }
 
   canAttemptOpcode4(reason = "") {
+    if (isEmergencyLocked) {
+      Logger.warn("GUARD", `Opcode 4 strictly blocked: Emergency Lockout is ACTIVE`, `reason="${reason}"`);
+      return false;
+    }
     if (this.isCooldownActive()) {
       Logger.warn("GUARD", `Opcode 4 blocked by active cooldown (${this.getRemainingCooldownSec()}s remaining)`, `reason="${reason}"`);
       return false;
@@ -143,11 +147,11 @@ class AntiGlitchGuard {
       this.jtcMoveDeadline = now + 12000; // 12 seconds maximum wait for JTC move
     }
 
-    // Circuit breaker check: maximum 2 joins in 60s
+    // Circuit breaker check: maximum 2 joins in 60s -> AUTO-TRIGGER EMERGENCY KILLSWITCH!
     if (this.recentJoins.length > 2) {
       this.consecutiveFailures++;
-      const backoffSec = Math.min(300, 30 * Math.pow(2, this.consecutiveFailures - 1));
-      this.triggerCooldown(backoffSec, `Rapid join loop detected (${this.recentJoins.length} joins in <60s). Anti-spam breaker tripped`);
+      Logger.error("ANTI_GLITCH", `⛔ Rapid join loop detected (${this.recentJoins.length} joins in <60s)! Auto-triggering Emergency Killswitch!`);
+      triggerEmergencyKillswitch(`Auto-Triggered: Rapid join spam loop (${this.recentJoins.length} joins in <60s)`);
       return false;
     }
 
@@ -216,6 +220,9 @@ let heartbeatTimer = null;
 let syncTimer = null;
 let isConnected = false;
 let lastHeartbeatAck = true;
+let isEmergencyLocked = false;
+let consecutiveRapidDrops = 0;
+let lastVoiceJoinTimestamp = 0;
 
 let localGuildId = process.env.GUILD_ID || cfg.saved_guild_id || "1442511921898192917";
 let localChannelId = process.env.CHANNEL_ID || cfg.saved_channel_id || DEFAULT_JTC_LOBBY;
@@ -430,6 +437,42 @@ function buildPresence(act, startMs) {
 // ============================================================================
 // CLOUD SYNC & LEADER CONTROL
 // ============================================================================
+// ============================================================================
+// EMERGENCY KILLSWITCH (MANUAL & AUTOMATIC)
+// ============================================================================
+async function triggerEmergencyKillswitch(reason = "Manual Trigger") {
+  isEmergencyLocked = true;
+  Logger.error("EMERGENCY", `⛔ EMERGENCY KILLSWITCH ENGAGED! Reason: "${reason}"`);
+  Logger.error("EMERGENCY", "Forcefully leaving voice room and freezing all room joins to protect account from timeout.");
+
+  if (ws && ws.readyState === 1) {
+    try {
+      ws.send(JSON.stringify({
+        op: 4,
+        d: {
+          guild_id: String(localGuildId),
+          channel_id: null,
+          self_mute: true,
+          self_deaf: true
+        }
+      }));
+    } catch (e) {}
+  }
+
+  localInVoice = false;
+  localActiveChannelId = null;
+  localDynamicChannelId = null;
+
+  try {
+    await fetch(`${WORKER_URL}/api/voice`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" },
+      body: JSON.stringify({ action: "emergency_killswitch", reason }),
+      signal: AbortSignal.timeout(4000)
+    });
+  } catch (e) {}
+}
+
 async function syncWithCloudWorker() {
   if (!isConnected || !ws || ws.readyState !== 1) return;
 
@@ -440,6 +483,30 @@ async function syncWithCloudWorker() {
     });
     if (!r.ok) return;
     const remote = await r.json();
+
+    // Emergency Killswitch Check from Cloud
+    if (remote.emergency_locked) {
+      if (!isEmergencyLocked) {
+        isEmergencyLocked = true;
+        Logger.warn("EMERGENCY", "⛔ Cloud reported Emergency Lockout! Forcefully leaving voice room and locking.");
+        if (localInVoice && ws && ws.readyState === 1) {
+          try {
+            ws.send(JSON.stringify({
+              op: 4,
+              d: { guild_id: String(localGuildId), channel_id: null, self_mute: true, self_deaf: true }
+            }));
+          } catch (e) {}
+          localInVoice = false;
+          localActiveChannelId = null;
+          localDynamicChannelId = null;
+        }
+      }
+      return;
+    } else if (isEmergencyLocked && remote.emergency_locked === false) {
+      isEmergencyLocked = false;
+      consecutiveRapidDrops = 0;
+      Logger.info("EMERGENCY", "🔓 Emergency lockout cleared from Cloud Worker. Normal operation resumed.");
+    }
 
     // 0. Leader Lock Check
     if (remote.leader_instance_id && remote.leader_instance_id !== daemonInstanceId) {
@@ -774,6 +841,9 @@ function connectGateway() {
                 return;
               }
 
+              lastVoiceJoinTimestamp = Date.now();
+              consecutiveRapidDrops = 0;
+
               // Check if server JTC bot moved us from lobby into dynamic room
               if (antiGlitch.isJtcMovePending && newChannelId !== DEFAULT_JTC_LOBBY) {
                 localDynamicChannelId = newChannelId;
@@ -816,6 +886,20 @@ function connectGateway() {
                   Logger.info("YIELD", "PC/Mobile grace period ended. Ready to resume 24/7 AFK mode.");
                 }, 15000);
                 return;
+              }
+
+              const staySec = (Date.now() - lastVoiceJoinTimestamp) / 1000;
+              // AUTO-TRIGGER EMERGENCY KILLSWITCH on 2 consecutive rapid drops (<12s)
+              if (staySec < 12.0 && !isUserActiveOnOtherClient && !isEmergencyLocked && lastVoiceJoinTimestamp > 0) {
+                consecutiveRapidDrops++;
+                Logger.warn("ANTI_GLITCH", `Rapid voice drop detected (${consecutiveRapidDrops}/2) in ${staySec.toFixed(1)}s!`);
+                if (consecutiveRapidDrops >= 2) {
+                  Logger.error("ANTI_GLITCH", "⛔ 2 consecutive rapid room drops detected! Auto-triggering Emergency Killswitch to prevent Discord timeout!");
+                  triggerEmergencyKillswitch("Auto-Triggered: 2 consecutive rapid room drops (<12s)");
+                  return;
+                }
+              } else {
+                consecutiveRapidDrops = 0;
               }
 
               // If room creation failed or disconnected immediately during JTC creation:

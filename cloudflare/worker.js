@@ -689,7 +689,9 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             </label>
           </div>
           <button class="btn-green" id="btnJoinVoice" style="width: 100%; height: 42px; font-size: 13px; margin-bottom: 8px;" onclick="joinVoiceRoom()">Join Voice Room (24/7 AFK)</button>
-          <button class="btn-red" style="width: 100%; height: 34px; font-size: 11px;" onclick="leaveVoiceRoom()">Leave Voice Room</button>
+          <button class="btn-red" style="width: 100%; height: 34px; font-size: 11px; margin-bottom: 8px;" onclick="leaveVoiceRoom()">Leave Voice Room</button>
+          <button class="btn-red" style="width: 100%; height: 38px; font-size: 11px; font-weight: 700; background: #8B0000; margin-bottom: 6px;" onclick="triggerEmergencyKillswitch()">⛔ EMERGENCY KILLSWITCH (Force Leave & Lock)</button>
+          <button class="btn-secondary" style="width: 100%; height: 30px; font-size: 11px;" onclick="resetEmergencyLock()">🔓 Reset Emergency Lock</button>
         </div>
       </div>
 
@@ -1278,6 +1280,12 @@ async function refreshTelemetry() {
   try {
     const r = await fetch('/health');
     const d = await r.json();
+    if (d.emergency_locked) {
+      document.getElementById('monStatus').textContent = '⛔ Status: EMERGENCY LOCKED (All Joins Blocked)';
+      document.getElementById('monStatus').style.color = 'var(--red)';
+      document.getElementById('sidebarVoice').textContent = '⛔ Voice: LOCKED';
+      document.getElementById('sidebarVoice').className = 'status-item inactive';
+    }
     if (d.account) {
       document.getElementById('prevUsername').textContent = d.account;
       const initials = d.account.slice(0, 2).toUpperCase();
@@ -1383,6 +1391,7 @@ export class DiscordAFKSession {
     this.startTimestampMs = Date.now();
     this.sessionStartMs = Date.now();
     this.leaderInstanceId = null;
+    this.emergencyLocked = false;
   }
 
   async initState() {
@@ -1393,6 +1402,8 @@ export class DiscordAFKSession {
       this.sessionStartMs = Date.now();
       await this.ctx.storage.put("sessionStartMs", this.sessionStartMs);
     }
+    const savedLock = await this.ctx.storage.get("emergencyLocked");
+    if (savedLock !== undefined) this.emergencyLocked = Boolean(savedLock);
     const savedLeader = await this.ctx.storage.get("leaderInstanceId");
     if (savedLeader) this.leaderInstanceId = savedLeader;
     const savedAct = await this.ctx.storage.get("activity");
@@ -1532,12 +1543,31 @@ export class DiscordAFKSession {
     if (request.method === "POST" && url.pathname.startsWith("/api/voice")) {
       await this.initState();
       const body = await request.json().catch(() => ({}));
+      if (body.action === "emergency_killswitch") {
+        this.emergencyLocked = true;
+        this.inVoice = false;
+        this.activeChannelId = null;
+        await this.ctx.storage.put("emergencyLocked", true);
+        await this.ctx.storage.put("inVoice", false);
+        await this.ctx.storage.delete("activeChannelId");
+        return new Response(JSON.stringify({ ok: true, emergency_locked: true, status: "emergency_locked" }), { headers: { "Content-Type": "application/json" } });
+      }
+      if (body.action === "unlock_emergency") {
+        this.emergencyLocked = false;
+        await this.ctx.storage.put("emergencyLocked", false);
+        return new Response(JSON.stringify({ ok: true, emergency_locked: false, status: "unlocked" }), { headers: { "Content-Type": "application/json" } });
+      }
       if (body.action === "leave") {
         this.inVoice = false;
         await this.ctx.storage.put("inVoice", false);
         this.activeChannelId = null;
         await this.ctx.storage.delete("activeChannelId");
         return new Response(JSON.stringify({ ok: true, status: "left" }), { headers: { "Content-Type": "application/json" } });
+      }
+      if (this.emergencyLocked) {
+        return new Response(JSON.stringify({ ok: false, error: "Emergency lockout is ACTIVE. Please reset lock before joining voice.", emergency_locked: true }), {
+          headers: { "Content-Type": "application/json" }
+        });
       }
       this.inVoice = true;
       await this.ctx.storage.put("inVoice", true);
@@ -1650,10 +1680,11 @@ export class DiscordAFKSession {
     await this.initState();
     const longevitySec = Math.max(0, Math.floor((Date.now() - this.sessionStartMs) / 1000));
     return new Response(JSON.stringify({
-      status: this.inVoice ? "online" : "connected",
+      status: this.emergencyLocked ? "emergency_locked" : (this.inVoice ? "online" : "connected"),
       service: "Discord Studio PRO — 24/7 Cloud Worker (v10 Modern)",
       version: "v10-modern",
       account: this.username,
+      emergency_locked: Boolean(this.emergencyLocked),
       session_start_ms: this.sessionStartMs,
       session_longevity_sec: longevitySec,
       leader_instance_id: this.leaderInstanceId || null,
