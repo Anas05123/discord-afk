@@ -29,19 +29,7 @@ const PORT = process.env.PORT || 10000;
 const DEFAULT_JTC_LOBBY = "1484570674659070063";
 
 const daemonInstanceId = `runner_${process.env.GITHUB_RUN_ID || Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-
-// GitHub Actions cron runs every 5 hours (300 mins).
-// Safety fallback rotation ceiling: 5h 20m (320 mins)
-const RUNNER_LIFETIME_MS = 320 * 60 * 1000;
-setTimeout(() => {
-  Logger.warn("LIFETIME", "Maximum 5h20m lifetime reached. Gracefully rotating session...");
-  if (ws && ws.readyState === 1) {
-    try {
-      ws.close(1000, "Safety fallback rotation");
-    } catch (e) {}
-  }
-  process.exit(0);
-}, RUNNER_LIFETIME_MS);
+const IS_GITHUB_ACTIONS = Boolean(process.env.GITHUB_ACTIONS === "true" || process.env.GITHUB_RUN_ID);
 
 // ============================================================================
 // REFINED STRUCTURED LOGGER
@@ -74,6 +62,24 @@ class Logger {
 }
 
 Logger.info("INIT", `Discord Voice AFK Runner initialized. Instance: ${daemonInstanceId}`);
+
+if (IS_GITHUB_ACTIONS) {
+  // GitHub Actions limits jobs to max 360 mins (6h).
+  // Safe scheduled handover at 345 mins (5h 45m) to safely maximize duration.
+  const RUNNER_LIFETIME_MS = 345 * 60 * 1000;
+  setTimeout(() => {
+    Logger.warn("LIFETIME", "GitHub Actions scheduled rotation ceiling reached (5h 45m). Handing over session cleanly...");
+    if (ws && ws.readyState === 1) {
+      try {
+        ws.close(1000, "Safety scheduled handover");
+      } catch (e) {}
+    }
+    process.exit(0);
+  }, RUNNER_LIFETIME_MS);
+  Logger.info("LIFETIME", "Environment: GitHub Actions Runner. Safe rotation ceiling configured for 5h 45m.");
+} else {
+  Logger.info("LIFETIME", "Environment: Persistent Cloud / Container (Render / Koyeb / Docker / Local). Indefinite 24/7/365 session enabled (No artificial shutdown timer; lasts 1+ days continuously).");
+}
 
 // ============================================================================
 // ANTI-GLITCH CIRCUIT BREAKER & COOLDOWN CONTROLLER
@@ -437,9 +443,9 @@ async function syncWithCloudWorker() {
 
     // 0. Leader Lock Check
     if (remote.leader_instance_id && remote.leader_instance_id !== daemonInstanceId) {
-      Logger.info("LEADER_LOCK", `Newer 24/7 runner (${remote.leader_instance_id}) active. Gracefully yielding.`);
+      Logger.info("LEADER_LOCK", `Newer 24/7 runner (${remote.leader_instance_id}) active. Handing over session cleanly without voice teardown.`);
       if (ws && ws.readyState === 1) {
-        try { ws.close(1000, "Superseded by newer runner"); } catch (e) {}
+        try { ws.close(1000, "Clean runner handover"); } catch (e) {}
       }
       process.exit(0);
     }
@@ -672,7 +678,7 @@ function connectGateway() {
 
           cacheGuildChannels(data.d?.guilds);
 
-          // Check if already in voice
+          // Check if already in voice from Discord Gateway
           if (Array.isArray(data.d?.guilds)) {
             for (const g of data.d.guilds) {
               if (Array.isArray(g.voice_states)) {
@@ -689,12 +695,36 @@ function connectGateway() {
                     localDynamicChannelId = localActiveChannelId;
                   }
 
-                  Logger.info("VOICE", `Resumed active voice session in "${cName}" (${localActiveChannelId})`);
+                  Logger.info("VOICE", `Resumed active voice session from gateway in "${cName}" (${localActiveChannelId})`);
                   reportTelemetryToCloud(localActiveChannelId, true, cName);
                   break;
                 }
               }
             }
+          }
+
+          // If voice state was not present in gateway guilds, check Cloud Worker telemetry for active dynamic room
+          if (!localActiveChannelId) {
+            try {
+              const r = await fetch(`${WORKER_URL}/health`, {
+                headers: { "User-Agent": "Mozilla/5.0" },
+                signal: AbortSignal.timeout(4000)
+              });
+              if (r.ok) {
+                const remote = await r.json();
+                if (remote.active_channel_id && remote.active_channel_id !== DEFAULT_JTC_LOBBY) {
+                  const exists = await verifyChannelExists(remote.active_channel_id);
+                  if (exists) {
+                    localActiveChannelId = String(remote.active_channel_id);
+                    localDynamicChannelId = String(remote.active_channel_id);
+                    localInVoice = true;
+                    const cName = remote.channel_name || await resolveChannelName(localActiveChannelId);
+                    Logger.info("SESSION_HANDOVER", `Adopted existing active dynamic voice room from cloud telemetry: "${cName}" (${localActiveChannelId})`);
+                    reportTelemetryToCloud(localActiveChannelId, true, cName);
+                  }
+                }
+              }
+            } catch (e) {}
           }
 
           // Start 2.5s Cloud Dashboard Sync Loop

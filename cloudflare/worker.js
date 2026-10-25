@@ -14,7 +14,7 @@ const PRESETS = {
     large_text: "Grand Theft Auto VI",
     small_image: "",
     small_text: "Rockstar Games",
-    icon: "🌴"
+    icon: "VI"
   },
   photoshop: {
     key: "photoshop",
@@ -26,7 +26,7 @@ const PRESETS = {
     large_text: "Adobe Photoshop 2026",
     small_image: "https://cdn-icons-png.flaticon.com/512/5968/5968520.png",
     small_text: "Creative Cloud",
-    icon: "🎨"
+    icon: "Ps"
   },
   illustrator: {
     key: "illustrator",
@@ -38,7 +38,7 @@ const PRESETS = {
     large_text: "Adobe Illustrator 2026",
     small_image: "https://cdn-icons-png.flaticon.com/512/5968/5968472.png",
     small_text: "Vector Engine",
-    icon: "✒️"
+    icon: "Ai"
   },
   aftereffects: {
     key: "aftereffects",
@@ -50,7 +50,7 @@ const PRESETS = {
     large_text: "Adobe After Effects 2026",
     small_image: "",
     small_text: "Motion Graphics",
-    icon: "✨"
+    icon: "Ae"
   },
   premiere: {
     key: "premiere",
@@ -62,7 +62,7 @@ const PRESETS = {
     large_text: "Adobe Premiere Pro 2026",
     small_image: "",
     small_text: "4K 60fps Timeline",
-    icon: "🎬"
+    icon: "Pr"
   },
   figma: {
     key: "figma",
@@ -74,7 +74,7 @@ const PRESETS = {
     large_text: "Figma UI/UX",
     small_image: "",
     small_text: "UI/UX Studio",
-    icon: "📐"
+    icon: "Fg"
   },
   vscode: {
     key: "vscode",
@@ -86,7 +86,7 @@ const PRESETS = {
     large_text: "Visual Studio Code",
     small_image: "https://raw.githubusercontent.com/github/explore/main/topics/react/react.png",
     small_text: "React 19 / JSX",
-    icon: "💻"
+    icon: "VS"
   },
   valorant: {
     key: "valorant",
@@ -98,19 +98,19 @@ const PRESETS = {
     large_text: "VALORANT",
     small_image: "https://cdn-icons-png.flaticon.com/512/1055/1055672.png",
     small_text: "Match Point",
-    icon: "🎯"
+    icon: "◈"
   },
   fortnite: {
     key: "fortnite",
     name: "Fortnite",
     client_id: "432980957394370572",
     details: "Battle Royale: Zero Build",
-    state: "Victory Royale! 👑",
+    state: "Victory Royale! (Top 1)",
     large_image: "https://cdn-icons-png.flaticon.com/512/588/588395.png",
     large_text: "Fortnite",
     small_image: "https://cdn-icons-png.flaticon.com/512/1828/1828884.png",
     small_text: "1st Place",
-    icon: "🪂"
+    icon: "◈"
   },
   roblox: {
     key: "roblox",
@@ -122,7 +122,7 @@ const PRESETS = {
     large_text: "ROBLOX",
     small_image: "https://cdn-icons-png.flaticon.com/512/727/727245.png",
     small_text: "Online",
-    icon: "🧱"
+    icon: "◈"
   },
   genshin: {
     key: "genshin",
@@ -134,31 +134,31 @@ const PRESETS = {
     large_text: "Genshin Impact",
     small_image: "https://cdn-icons-png.flaticon.com/512/2997/2997295.png",
     small_text: "Adventure Rank 60",
-    icon: "⚔️"
+    icon: "◈"
   },
   chill: {
     key: "chill",
     name: "Lo-Fi Chill & Beats",
     client_id: "383226320970055681",
     details: "Listening to Lo-Fi Vibes",
-    state: "Relaxing / AFK ☕",
+    state: "Relaxing / AFK Session",
     large_image: "https://cdn-icons-png.flaticon.com/512/3074/3074767.png",
     large_text: "Lo-Fi Coffee",
     small_image: "https://cdn-icons-png.flaticon.com/512/727/727245.png",
     small_text: "Chill Session",
-    icon: "☕"
+    icon: "◈"
   },
   studying: {
     key: "studying",
     name: "Deep Study & Focus",
     client_id: "383226320970055681",
-    details: "Preparing for Exams 📚",
+    details: "Deep Work Session",
     state: "Do Not Disturb / Pomodoro",
     large_image: "https://cdn-icons-png.flaticon.com/512/2232/2232688.png",
     large_text: "Deep Study",
     small_image: "https://cdn-icons-png.flaticon.com/512/2997/2997295.png",
     small_text: "Pomodoro Focus",
-    icon: "📚"
+    icon: "◈"
   }
 };
 
@@ -385,8 +385,8 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 
   <div class="status-card">
     <div class="status-header">SYSTEM STATUS</div>
-    <div class="status-item" id="sidebarRpc">🟢 RPC: Active</div>
-    <div class="status-item" id="sidebarVoice">🟢 Voice: In Room</div>
+    <div class="status-item" id="sidebarRpc">● RPC: Active</div>
+    <div class="status-item" id="sidebarVoice">● Voice: In Room</div>
   </div>
 </div>
 
@@ -459,14 +459,14 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
                 <input type="checkbox" id="cbShowTimer" checked onchange="updatePreview()"> Show Timer
               </label>
               <select class="form-select" id="timerModeMenu" onchange="onTimerModeChange(this.value)" style="flex: 1;">
-                <option value="0,0">⏱️ Natural (Starts at 00:00)</option>
-                <option value="0,30">⚡ 30 Minutes Elapsed</option>
-                <option value="2,0">🔥 2 Hours Elapsed</option>
-                <option value="5,0">💻 5 Hours Elapsed (Deep Work)</option>
-                <option value="12,0">🌙 12 Hours Elapsed</option>
-                <option value="24,0">👑 24 Hours Elapsed (1 Day)</option>
-                <option value="48,0">🚀 48 Hours Elapsed (2 Days)</option>
-                <option value="custom">🛠️ Custom Hours & Minutes</option>
+                <option value="0,0">Natural Elapsed (Starts at 00:00)</option>
+                <option value="0,30">30 Minutes Elapsed</option>
+                <option value="2,0">2 Hours Elapsed</option>
+                <option value="5,0">5 Hours Elapsed (Deep Work)</option>
+                <option value="12,0">12 Hours Elapsed</option>
+                <option value="24,0">24 Hours Elapsed (1 Full Day)</option>
+                <option value="48,0">48 Hours Elapsed (2 Full Days)</option>
+                <option value="custom">Custom Hours & Minutes</option>
               </select>
               <button class="btn-secondary" style="flex: 0 0 115px; height: 34px;" onclick="resetTimerNatural()">Reset (00:00)</button>
             </div>
@@ -512,7 +512,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             <div class="popout-banner"></div>
             <div class="popout-body">
               <div class="avatar-row">
-                <div class="avatar-circle">👤</div>
+                <div class="avatar-circle" id="prevAvatarInitials">L</div>
                 <div>
                   <div class="popout-username" id="prevUsername">la2nis</div>
                   <div class="popout-online">● Online (24/7 Cloud AFK)</div>
@@ -522,8 +522,8 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
               <div class="popout-section-lbl">PLAYING A GAME</div>
               <div class="activity-row">
                 <div class="art-canvas">
-                  <div class="large-art" id="prevLargeArt">🎮</div>
-                  <div class="small-badge" id="prevSmallBadge" style="display:none;">🏷️</div>
+                  <div class="large-art" id="prevLargeArt">◈</div>
+                  <div class="small-badge" id="prevSmallBadge" style="display:none;">◆</div>
                 </div>
                 <div class="act-info">
                   <div class="act-name" id="prevName">No Activity Set</div>
@@ -591,10 +591,10 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
       <div class="col-scroll">
         <div class="section-card">
           <div class="card-title">Live Quest Progress & Monitor</div>
-          <div id="lblQuestStatus" style="font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">⚪ Status: Idle (No game running)</div>
+          <div id="lblQuestStatus" style="font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">○ Status: Idle (No game running)</div>
           <div id="lblQuestGame" style="font-size: 12px; color: var(--text-secondary);">Active Game: None</div>
           <div id="lblQuestExe" style="font-size: 11px; color: var(--text-muted); margin: 2px 0;">Process Name: -</div>
-          <div id="lblQuestRpc" style="font-size: 11px; font-weight: 700; color: var(--text-muted);">Discord Activity: ⚪ Idle</div>
+          <div id="lblQuestRpc" style="font-size: 11px; font-weight: 700; color: var(--text-muted);">Discord Activity: ○ Idle</div>
 
           <div class="timer-box">
             <div class="timer-big" id="lblQuestTimer">00:00 / 15:00</div>
@@ -661,17 +661,17 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
               <button class="btn-secondary" style="height:24px; padding:0 10px; font-size:10px;" onclick="loadGuildVoiceChannels()">Refresh Voice Rooms</button>
             </div>
             <select class="form-select" id="selectChannelDropdown" onchange="onChannelDropdownChange(this.value)" style="margin-bottom:6px;">
-              <option value="1484570674659070063">🔊 ➕・JOIN TO CREATE (Auto-Creates Your Room) — 1484570674659070063</option>
-              <option value="1442511922565091382">🔊 🏢・𝖬𝖺𝗂𝗇 𝖫𝗈𝖻𝖻𝗒 — 1442511922565091382</option>
-              <option value="1475888620630966322">🔊 🕌︱بثّ القُرآن الكريم — 1475888620630966322</option>
-              <option value="1482608241316729035">🔊 📚・𝖲𝗍𝗎𝖽𝗒 𝖫𝗈𝗎𝗇𝗀𝖾 — 1482608241316729035</option>
-              <option value="1446993760977289276">🔊 🎸・𝖬𝗎𝗌𝗂𝖼 — 1446993760977289276</option>
-              <option value="1447784971023421663">🔊 🍿・𝖬𝗈𝗏𝗂𝖾 𝖳𝗂𝗆𝖾 — 1447784971023421663</option>
-              <option value="1460725269806584081">🔊 🗿・ 𝖫𝗈𝗇𝖾 𝖱𝖺𝗇𝗀𝖾𝗋 — 1460725269806584081</option>
-              <option value="1460725809600925706">🔊 🎸・ 𝖱𝗈𝖼𝗄 & 𝖱𝗈𝗅𝗅 — 1460725809600925706</option>
-              <option value="1460726493490577613">🔊 🎯・ 𝖳𝗁𝗋𝖾𝖾 𝖬𝗎𝗌𝗄𝖾𝗍𝖾𝖾𝗋𝗌 — 1460726493490577613</option>
-              <option value="1482580750267056269">🔊 ✨・ 𝖥𝗂𝗏𝖾 𝖲𝗍𝖺𝗋𝗌 — 1482580750267056269</option>
-              <option value="1496634010980319263">🔊 🧬・ 𝖥𝖺𝗇𝗍𝖺𝗌𝗍𝗂𝖼 𝖥𝗈𝗎𝗋 — 1496634010980319263</option>
+              <option value="1484570674659070063">◈ ➕・JOIN TO CREATE (Auto-Creates Your Room) — 1484570674659070063</option>
+              <option value="1442511922565091382">◈ 🏢・Main Lobby — 1442511922565091382</option>
+              <option value="1475888620630966322">◈ 🕌︱Quran Broadcast — 1475888620630966322</option>
+              <option value="1482608241316729035">◈ 📚・Study Lounge — 1482608241316729035</option>
+              <option value="1446993760977289276">◈ 🎸・Music Room — 1446993760977289276</option>
+              <option value="1447784971023421663">◈ 🍿・Movie Time — 1447784971023421663</option>
+              <option value="1460725269806584081">◈ 🗿・Lone Ranger — 1460725269806584081</option>
+              <option value="1460725809600925706">◈ 🎸・Rock & Roll — 1460725809600925706</option>
+              <option value="1460726493490577613">◈ 🎯・Three Musketeers — 1460726493490577613</option>
+              <option value="1482580750267056269">◈ ✨・Five Stars — 1482580750267056269</option>
+              <option value="1496634010980319263">◈ 🧬・Fantastic Four — 1496634010980319263</option>
             </select>
             <input class="form-input" id="entryChannelId" value="1484570674659070063" placeholder="Voice Channel ID (or pick from dropdown above)">
           </div>
@@ -696,7 +696,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
       <div class="col-scroll">
         <div class="section-card">
           <div class="card-title">Live Room Telemetry</div>
-          <div id="monStatus" style="font-size: 13px; font-weight: 700; color: var(--green); margin-bottom: 6px;">🟢 Status: Connected & In Voice Room (24/7 Cloud)</div>
+          <div id="monStatus" style="font-size: 13px; font-weight: 700; color: var(--green); margin-bottom: 6px;">● Status: Connected & In Voice Room (24/7 Cloud)</div>
           <div id="monUser" style="font-size: 12px; color: var(--text-secondary); margin: 4px 0;">Account: la2nis</div>
           <div id="monRoom" style="font-size: 12px; color: var(--text-muted); margin: 4px 0;">Active Voice Channel: 1484570674659070063</div>
           <div id="monUptime" style="font-size: 12px; color: var(--text-muted); margin: 4px 0;">Session Uptime: 00:00:00</div>
@@ -739,9 +739,11 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
         <div class="card-title">24/7 Cloud Hosting Engine</div>
         <div class="card-desc" style="font-size: 12px; color: var(--text-secondary);">
           Your Discord Studio Pro instance is actively hosted on Cloudflare's global edge network using a persistent Durable Object with a 25-second internal heartbeat alarm.<br><br>
-          • <b>Status:</b> 🟢 Online 24/7 (Zero PC power required)<br>
-          • <b>Account:</b> la2nis<br>
-          • <b>Voice Channel:</b> 1557661172990480487 (Self-Muted & Self-Deafened)
+          • <b>Status:</b> ● Online 24/7 (Zero PC power required)<br>
+          • <b>Session Longevity:</b> Designed to run 1+ day continuously without disconnecting<br>
+          • <b>Handover Protocol:</b> Seamless runner takeover without voice channel recreation<br>
+          • <b>Anti-Glitch Engine:</b> Sliding window circuit breaker strictly prevents channel creation spam<br>
+          • <b>Voice Mode:</b> Self-Muted & Self-Deafened (Zero Bandwidth)
         </div>
       </div>
     </div>
@@ -878,9 +880,9 @@ function updatePreview() {
 
   const largeBox = document.getElementById('prevLargeArt');
   if (largeImg.startsWith('http')) {
-    largeBox.innerHTML = \`<img src="\${largeImg}" onerror="this.parentElement.textContent='🎮'">\`;
+    largeBox.innerHTML = \`<img src="\${largeImg}" onerror="this.parentElement.textContent='◈'">\`;
   } else {
-    largeBox.textContent = hasAny ? '💻' : '🎮';
+    largeBox.textContent = hasAny ? '◈' : '◈';
   }
 
   const smallBox = document.getElementById('prevSmallBadge');
@@ -889,9 +891,9 @@ function updatePreview() {
   } else {
     smallBox.style.display = 'flex';
     if (smallImg.startsWith('http')) {
-      smallBox.innerHTML = \`<img src="\${smallImg}" onerror="this.parentElement.textContent='🏷️'">\`;
+      smallBox.innerHTML = \`<img src="\${smallImg}" onerror="this.parentElement.textContent='◆'">\`;
     } else {
-      smallBox.textContent = '🏷️';
+      smallBox.textContent = '◆';
     }
   }
 
@@ -950,7 +952,7 @@ async function applyActivity(resetTimer = false, presetKey = '') {
     reset_timer: resetTimer
   };
   const btn = document.getElementById('btnTopApply');
-  btn.textContent = '✅ Activity Updated!';
+  btn.textContent = 'Activity Synced!';
   btn.style.background = 'var(--green)';
   setTimeout(() => {
     btn.textContent = 'Set Activity on Discord';
@@ -983,17 +985,17 @@ async function clearPresence() {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({ clear: true, name: '', details: '', state: '', application_id: '', client_id: '', large_image: '', large_text: '', small_image: '', small_text: '', key: '' })
   });
-  document.getElementById('sidebarRpc').textContent = '⚪ RPC: Cleared';
+  document.getElementById('sidebarRpc').textContent = '○ RPC: Cleared';
 }
 
 /* QUEST SPOOFER & AUTO-QUEUE */
 function startQuestSpoof(g) {
   questElapsed = 0;
-  document.getElementById('lblQuestStatus').textContent = '🟢 Playing: ' + g.name;
+  document.getElementById('lblQuestStatus').textContent = '● Playing: ' + g.name;
   document.getElementById('lblQuestStatus').style.color = 'var(--green)';
   document.getElementById('lblQuestGame').textContent = 'Active Game: ' + g.name;
   document.getElementById('lblQuestExe').textContent = 'Process: ' + g.exe + ' (Cloud Simulated)';
-  document.getElementById('lblQuestRpc').textContent = 'Discord Activity: 🟢 Playing ' + g.name;
+  document.getElementById('lblQuestRpc').textContent = 'Discord Activity: ● Playing ' + g.name;
   document.getElementById('lblQuestRpc').style.color = 'var(--green)';
 
   fetch('/api/activity', {
@@ -1023,7 +1025,7 @@ function startQuestSpoof(g) {
         skipQuestQueue();
       } else {
         clearInterval(questInterval);
-        document.getElementById('lblQuestStatus').textContent = '🎉 15-Minute Quest Completed! Claim your reward in Discord!';
+        document.getElementById('lblQuestStatus').textContent = '✓ 15-Minute Quest Completed! Claim your reward in Discord.';
       }
     }
   }, 1000);
@@ -1032,11 +1034,11 @@ function startQuestSpoof(g) {
 function stopQuestSpoofer() {
   if (questInterval) clearInterval(questInterval);
   activeQuestIdx = -1;
-  document.getElementById('lblQuestStatus').textContent = '⚪ Status: Idle (No game running)';
+  document.getElementById('lblQuestStatus').textContent = '○ Status: Idle (No game running)';
   document.getElementById('lblQuestStatus').style.color = 'var(--text-muted)';
   document.getElementById('lblQuestGame').textContent = 'Active Game: None';
   document.getElementById('lblQuestExe').textContent = 'Process Name: -';
-  document.getElementById('lblQuestRpc').textContent = 'Discord Activity: ⚪ Idle';
+  document.getElementById('lblQuestRpc').textContent = 'Discord Activity: ○ Idle';
   document.getElementById('questProgressBar').style.width = '0%';
   applyActivity();
 }
@@ -1063,7 +1065,7 @@ function renderQuestQueue() {
     <div class="queue-item">
       <span><b>\${i+1}.</b> \${item.game.emoji || '🎮'} \${item.game.name}</span>
       <span style="color: \${item.status==='running'?'var(--green)':item.status==='done'?'var(--blurple)':'var(--text-muted)'}; font-weight:700;">
-        \${item.status==='running'?'⏳ Playing':item.status==='done'?'✅ Done':'⏱️ Queued'}
+        \${item.status==='running'?'● In Progress':item.status==='done'?'✓ Complete':'○ Queued'}
       </span>
     </div>
   \`).join('');
@@ -1095,7 +1097,7 @@ function skipQuestQueue() {
     activeQuestIdx = -1;
     renderQuestQueue();
     stopQuestSpoofer();
-    document.getElementById('lblQuestStatus').textContent = '🎉 All Queued Quests Finished! Ready to claim.';
+    document.getElementById('lblQuestStatus').textContent = '✓ All Queued Quests Finished! Ready to claim.';
     document.getElementById('lblQuestStatus').style.color = 'var(--green)';
   }
 }
@@ -1114,21 +1116,21 @@ function launchCustomQuest() {
   const raw = document.getElementById('customQuestExe').value.trim();
   if (!raw) return;
   const exe = raw.endsWith('.exe') ? raw : raw.toLowerCase().replace(/\\s+/g, '') + '.exe';
-  startQuestSpoof({ id: 'custom', name: raw.replace('.exe', ''), exe, client_id: '1470616226995765409', emoji: '🎮' });
+  startQuestSpoof({ id: 'custom', name: raw.replace('.exe', ''), exe, client_id: '1470616226995765409', emoji: '◈' });
 }
 
 function queueCustomQuest() {
   const raw = document.getElementById('customQuestExe').value.trim();
   if (!raw) return;
   const exe = raw.endsWith('.exe') ? raw : raw.toLowerCase().replace(/\\s+/g, '') + '.exe';
-  addQuestToQueue({ id: 'custom_' + Date.now(), name: raw.replace('.exe', ''), exe, client_id: '1470616226995765409', emoji: '🎮' });
+  addQuestToQueue({ id: 'custom_' + Date.now(), name: raw.replace('.exe', ''), exe, client_id: '1470616226995765409', emoji: '◈' });
 }
 
 function searchQuestGame() {
   const q = document.getElementById('questSearchInput').value.trim().toLowerCase();
   if (!q) return;
   const matches = QUEST_GAMES_DATA.filter(g => g.name.toLowerCase().includes(q) || g.exe.toLowerCase().includes(q) || g.id.includes(q));
-  const list = matches.length ? matches : [{ id: q, name: q.toUpperCase(), exe: q.replace(/\\s+/g, '') + '.exe', client_id: '1470616226995765409', emoji: '🎮', desc: 'Detected Game' }];
+  const list = matches.length ? matches : [{ id: q, name: q.toUpperCase(), exe: q.replace(/\\s+/g, '') + '.exe', client_id: '1470616226995765409', emoji: '◈', desc: 'Detected Game' }];
   document.getElementById('questSearchResults').innerHTML = list.map(g => \`
     <div class="quest-row" style="margin-top:6px;">
       <div class="quest-emoji">\${g.emoji}</div>
@@ -1136,7 +1138,7 @@ function searchQuestGame() {
         <div class="quest-title">\${g.name}</div>
         <div class="quest-sub">Executable: \${g.exe} • App ID: \${g.client_id}</div>
       </div>
-      <button class="btn-green" style="height:28px; padding:0 10px; font-size:11px;" onclick='startQuestSpoof(\${JSON.stringify(g)})'>🚀 Spoof Now</button>
+      <button class="btn-green" style="height:28px; padding:0 10px; font-size:11px;" onclick='startQuestSpoof(\${JSON.stringify(g)})'>Spoof Now</button>
     </div>
   \`).join('');
 }
@@ -1192,8 +1194,8 @@ async function joinVoiceRoom() {
   const self_deaf = document.getElementById('cbDeaf').checked;
   const actName = document.getElementById('entryVoiceActivity').value.trim();
   const btn = document.getElementById('btnJoinVoice');
-  if (btn) btn.textContent = '⏳ Connecting & Joining Voice Room...';
-  document.getElementById('monStatus').textContent = '⏳ Joining Voice Channel in Discord...';
+  if (btn) btn.textContent = 'Connecting & Joining Voice Room...';
+  document.getElementById('monStatus').textContent = '● Connecting to Voice Channel in Discord...';
   document.getElementById('monStatus').style.color = 'var(--yellow)';
 
   try {
@@ -1205,12 +1207,12 @@ async function joinVoiceRoom() {
     const d = await r.json();
     const activeChan = d.channel_id || channel_id;
     const chanLabel = d.channel_name ? \`\${d.channel_name} (\${activeChan})\` : activeChan;
-    document.getElementById('monStatus').textContent = '🟢 Status: Connected & In Voice Room: ' + chanLabel;
+    document.getElementById('monStatus').textContent = '● Status: Connected & In Voice Room: ' + chanLabel;
     document.getElementById('monStatus').style.color = 'var(--green)';
     document.getElementById('monRoom').textContent = 'Active Voice Channel: ' + chanLabel;
-    document.getElementById('sidebarVoice').textContent = '🟢 Voice: In Room';
+    document.getElementById('sidebarVoice').textContent = '● Voice: In Room';
   } catch (e) {
-    document.getElementById('monStatus').textContent = '🔴 Error joining voice room: ' + e;
+    document.getElementById('monStatus').textContent = '● Error joining voice room: ' + e;
     document.getElementById('monStatus').style.color = 'var(--red)';
   } finally {
     if (btn) btn.textContent = 'Join Voice Room (24/7 AFK)';
@@ -1225,7 +1227,7 @@ async function leaveVoiceRoom() {
   });
   document.getElementById('monStatus').textContent = '⚪ Status: Disconnected from Voice';
   document.getElementById('monStatus').style.color = 'var(--text-muted)';
-  document.getElementById('sidebarVoice').textContent = '⚪ Voice: Offline';
+  document.getElementById('sidebarVoice').textContent = '○ Voice: Offline';
 }
 
 /* CATALOG SEARCH */
@@ -1278,7 +1280,13 @@ async function refreshTelemetry() {
     const d = await r.json();
     if (d.account) {
       document.getElementById('prevUsername').textContent = d.account;
-      document.getElementById('monUser').textContent = 'Account: ' + d.account + ' (24/7 Cloud Connected)';
+      const initials = d.account.slice(0, 2).toUpperCase();
+      const initEl = document.getElementById('prevAvatarInitials');
+      if (initEl) initEl.textContent = initials;
+      document.getElementById('monUser').textContent = d.account + ' (24/7 Cloud Session)';
+    }
+    if (d.session_start_ms) {
+      sessionStartMs = d.session_start_ms;
     }
     if (d.active_channel_id || d.channel_id) {
       const cid = d.active_channel_id || d.channel_id;
@@ -1305,7 +1313,7 @@ async function refreshTelemetry() {
       ].some(id => document.activeElement === document.getElementById(id));
 
       if (isCleared) {
-        document.getElementById('sidebarRpc').textContent = '⚪ RPC: Cleared';
+        document.getElementById('sidebarRpc').textContent = '○ RPC: Cleared';
         if (!isTyping) {
           document.getElementById('entryClientId').value = '';
           document.getElementById('entryDetails').value = '';
@@ -1318,7 +1326,7 @@ async function refreshTelemetry() {
           updatePreview();
         }
       } else {
-        document.getElementById('sidebarRpc').textContent = '🟢 RPC: Active';
+        document.getElementById('sidebarRpc').textContent = '● RPC: Active';
         if (!isTyping) {
           if (act.client_id || act.application_id) document.getElementById('entryClientId').value = act.client_id || act.application_id;
           if (act.details !== undefined) document.getElementById('entryDetails').value = act.details;
@@ -1373,10 +1381,18 @@ export class DiscordAFKSession {
     this.activity = { cleared: true, name: "", details: "", state: "", application_id: "", client_id: "" };
     this.liveVoiceConnected = false;
     this.startTimestampMs = Date.now();
+    this.sessionStartMs = Date.now();
     this.leaderInstanceId = null;
   }
 
   async initState() {
+    const savedSessionStart = await this.ctx.storage.get("sessionStartMs");
+    if (savedSessionStart) {
+      this.sessionStartMs = Number(savedSessionStart);
+    } else {
+      this.sessionStartMs = Date.now();
+      await this.ctx.storage.put("sessionStartMs", this.sessionStartMs);
+    }
     const savedLeader = await this.ctx.storage.get("leaderInstanceId");
     if (savedLeader) this.leaderInstanceId = savedLeader;
     const savedAct = await this.ctx.storage.get("activity");
@@ -1631,10 +1647,15 @@ export class DiscordAFKSession {
       });
     }
 
+    await this.initState();
+    const longevitySec = Math.max(0, Math.floor((Date.now() - this.sessionStartMs) / 1000));
     return new Response(JSON.stringify({
       status: this.inVoice ? "online" : "connected",
-      service: "Discord Studio Pro — 24/7 Cloud Worker",
+      service: "Discord Studio PRO — 24/7 Cloud Worker (v10 Modern)",
+      version: "v10-modern",
       account: this.username,
+      session_start_ms: this.sessionStartMs,
+      session_longevity_sec: longevitySec,
       leader_instance_id: this.leaderInstanceId || null,
       in_voice: this.inVoice,
       live_in_voice: this.liveVoiceConnected !== undefined ? this.liveVoiceConnected : this.inVoice,
@@ -1656,7 +1677,7 @@ export class DiscordAFKSession {
 
 export default {
   async fetch(request, env) {
-    const id = env.DISCORD_AFK_SESSION.idFromName("global-24-7-afk-v8");
+    const id = env.DISCORD_AFK_SESSION.idFromName("global-24-7-afk-v10");
     const stub = env.DISCORD_AFK_SESSION.get(id);
     return stub.fetch(request);
   }
