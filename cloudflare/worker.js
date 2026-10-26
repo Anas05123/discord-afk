@@ -1256,12 +1256,14 @@ async function joinVoiceRoom() {
       throw new Error(d.error);
     }
     const activeChan = d.channel_id || channel_id;
-    const chanLabel = d.channel_name ? \`\${d.channel_name} (\${activeChan})\` : activeChan;
+    const chanLabel = d.channel_name ? (d.channel_name + ' (' + activeChan + ')') : activeChan;
+    appendWebLog('VOICE', 'SUCCESS: Voice join dispatched for ' + chanLabel + '. Connecting on Discord Gateway...', 'SUCCESS');
     document.getElementById('monStatus').textContent = '[CONNECTED] Status: Connected & In Voice Room: ' + chanLabel;
     document.getElementById('monStatus').style.color = 'var(--green)';
     document.getElementById('monRoom').textContent = 'Active Voice Channel: ' + chanLabel;
     document.getElementById('sidebarVoice').innerHTML = '<span class="status-indicator online"></span>Voice: In Room';
   } catch (e) {
+    appendWebLog('ERROR', 'Failed to join voice room: ' + (e && e.message ? e.message : e), 'ERROR');
     document.getElementById('monStatus').textContent = '[ERROR] Error joining voice room: ' + e;
     document.getElementById('monStatus').style.color = 'var(--red)';
   } finally {
@@ -1615,6 +1617,8 @@ export class DiscordAFKSession {
     }
     const savedLock = await this.ctx.storage.get("emergencyLocked");
     if (savedLock !== undefined) this.emergencyLocked = Boolean(savedLock);
+    const savedVoiceReq = await this.ctx.storage.get("voiceRequestedAt");
+    if (savedVoiceReq) this.voiceRequestedAt = Number(savedVoiceReq);
     const savedLogs = await this.ctx.storage.get("logs");
     if (savedLogs && Array.isArray(savedLogs)) this.logs = savedLogs;
     const savedLeader = await this.ctx.storage.get("leaderInstanceId");
@@ -1759,11 +1763,25 @@ export class DiscordAFKSession {
       if (body.action === "emergency_killswitch") {
         this.emergencyLocked = true;
         this.inVoice = false;
+        this.liveVoiceConnected = false;
         this.activeChannelId = null;
         await this.ctx.storage.put("emergencyLocked", true);
         await this.ctx.storage.put("inVoice", false);
         await this.ctx.storage.delete("activeChannelId");
         this.addLog("EMERGENCY", "KILLSWITCH", "Emergency Killswitch engaged: Force leave packet sent, room joining frozen.");
+
+        if (this.ws && this.connected) {
+          try {
+            this.ws.send(JSON.stringify({
+              op: 4,
+              d: { guild_id: String(this.guildId).trim(), channel_id: null, self_mute: true, self_deaf: true }
+            }));
+            this.ws.close(1000, "Emergency Killswitch");
+          } catch (e) {}
+          this.ws = null;
+          this.connected = false;
+          this.ready = false;
+        }
 
         // Forceful immediate disconnect via direct Discord REST API
         if (token && this.guildId) {
@@ -1783,16 +1801,28 @@ export class DiscordAFKSession {
       }
       if (body.action === "unlock_emergency") {
         this.emergencyLocked = false;
+        this.recentJoinTimestamps = [];
+        this.consecutiveRapidDrops = 0;
         await this.ctx.storage.put("emergencyLocked", false);
         this.addLog("SAFETY", "SAFETY", "Emergency lock cleared: Normal voice operations restored.");
         return new Response(JSON.stringify({ ok: true, emergency_locked: false, status: "unlocked" }), { headers: { "Content-Type": "application/json" } });
       }
       if (body.action === "leave") {
         this.inVoice = false;
+        this.liveVoiceConnected = false;
         await this.ctx.storage.put("inVoice", false);
         this.activeChannelId = null;
         await this.ctx.storage.delete("activeChannelId");
         this.addLog("VOICE", "LEAVE", "Voice disconnect requested: Left voice room.");
+
+        if (this.ws && this.connected) {
+          try {
+            this.ws.send(JSON.stringify({
+              op: 4,
+              d: { guild_id: String(this.guildId).trim(), channel_id: null, self_mute: true, self_deaf: true }
+            }));
+          } catch (e) {}
+        }
 
         // Forceful immediate disconnect via direct Discord REST API
         if (token && this.guildId) {
@@ -1816,6 +1846,8 @@ export class DiscordAFKSession {
         });
       }
       this.inVoice = true;
+      this.recentJoinTimestamps = [];
+      this.consecutiveRapidDrops = 0;
       await this.ctx.storage.put("inVoice", true);
       if (body.guild_id) {
         this.guildId = String(body.guild_id).trim();
@@ -1840,13 +1872,17 @@ export class DiscordAFKSession {
         this.activity.cleared = false;
         await this.ctx.storage.put("activity", this.activity);
       }
-      await this.resolveValidChannel(token);
+      this.voiceRequestedAt = Date.now();
+      await this.ctx.storage.put("voiceRequestedAt", this.voiceRequestedAt);
+      const targetChan = await this.resolveValidChannel(token);
+      this.addLog("VOICE", "JOIN", "Voice join dispatched for " + (this.channelName || targetChan) + " (" + targetChan + "). Syncing with 24/7 Voice Engine...");
 
       return new Response(JSON.stringify({
         ok: true,
         guild_id: this.guildId,
-        channel_id: this.activeChannelId || this.channelId,
+        channel_id: this.activeChannelId || targetChan,
         requested_channel_id: this.channelId,
+        voice_requested_at: this.voiceRequestedAt,
         channel_name: this.channelName,
         self_mute: this.selfMute,
         self_deaf: this.selfDeaf,

@@ -34,6 +34,16 @@ const IS_GITHUB_ACTIONS = Boolean(process.env.GITHUB_ACTIONS === "true" || proce
 // ============================================================================
 // REFINED STRUCTURED LOGGER
 // ============================================================================
+const pendingCloudLogs = [];
+
+function pushCloudLog(level, tag, message) {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const ts = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  pendingCloudLogs.push({ level, tag, message, ts });
+  if (pendingCloudLogs.length > 40) pendingCloudLogs.shift();
+}
+
 class Logger {
   static _ts() {
     const d = new Date();
@@ -44,16 +54,20 @@ class Logger {
   static info(tag, message, meta = "") {
     const metaStr = meta ? ` | ${meta}` : "";
     console.log(`[${this._ts()}] [INFO] [${tag}] ${message}${metaStr}`);
+    const lvl = (tag === "VOICE" || tag === "JTC_ENGINE") ? "VOICE" : "SAFETY";
+    pushCloudLog(lvl, tag, `${message}${metaStr}`);
   }
 
   static warn(tag, message, meta = "") {
     const metaStr = meta ? ` | ${meta}` : "";
     console.warn(`[${this._ts()}] [WARN] [${tag}] ${message}${metaStr}`);
+    pushCloudLog("WARN", tag, `${message}${metaStr}`);
   }
 
   static error(tag, message, meta = "") {
     const metaStr = meta ? ` | ${meta}` : "";
     console.error(`[${this._ts()}] [ERROR] [${tag}] ${message}${metaStr}`);
+    pushCloudLog("ERROR", tag, `${message}${metaStr}`);
   }
 
   static countdown(remainingSec, totalSec, reason) {
@@ -237,6 +251,7 @@ let lastMute = null;
 let lastDeaf = null;
 let lastTargetChan = "";
 let lastActivityKey = "";
+let lastHandledVoiceRequestAt = 0;
 
 // ============================================================================
 // BUILT-IN HTTP SERVER (PASS CLOUD HEALTH CHECKS)
@@ -404,9 +419,8 @@ function buildPresence(act, startMs) {
     const displayName = act.name || appInfo.name || "Custom Activity";
     const entry = {
       name: displayName,
-      type: Number(act.type !== undefined ? act.type : 0),
-      timestamps: { start: startMs || Date.now() },
-      flags: 1
+      type: Number(act.type || 0),
+      timestamps: { start: startMs || Date.now() }
     };
     if (act.details) entry.details = act.details;
     if (act.state) entry.state = act.state;
@@ -506,7 +520,24 @@ async function syncWithCloudWorker() {
     } else if (isEmergencyLocked && remote.emergency_locked === false) {
       isEmergencyLocked = false;
       consecutiveRapidDrops = 0;
-      Logger.info("EMERGENCY", "🔓 Emergency lockout cleared from Cloud Worker. Normal operation resumed.");
+      antiGlitch.reset();
+      isUserActiveOnOtherClient = false;
+      Logger.info("SAFETY", "Emergency lockout cleared from Cloud Worker. Normal operation resumed.");
+    }
+
+    // Check if user clicked Join Voice Room on Web Dashboard
+    if (remote.voice_requested_at && Number(remote.voice_requested_at) > lastHandledVoiceRequestAt) {
+      const isInitialBoot = (lastHandledVoiceRequestAt === 0);
+      lastHandledVoiceRequestAt = Number(remote.voice_requested_at);
+      if (!isInitialBoot) {
+        antiGlitch.reset();
+        isUserActiveOnOtherClient = false;
+        if (userPcYieldTimer) {
+          clearTimeout(userPcYieldTimer);
+          userPcYieldTimer = null;
+        }
+        Logger.info("VOICE", "Manual Join Voice Room request received from Web Dashboard. Executing immediate join...");
+      }
     }
 
     // 0. Leader Lock Check
@@ -661,6 +692,10 @@ async function syncWithCloudWorker() {
       }));
       lastActivityKey = actKey;
     }
+
+    if (pendingCloudLogs.length > 0) {
+      await reportTelemetryToCloud(localActiveChannelId, localInVoice);
+    }
   } catch (err) {
     // Transient sync network error
   }
@@ -668,10 +703,12 @@ async function syncWithCloudWorker() {
 
 async function reportTelemetryToCloud(activeChan, inVoice, chanName = "", registerLeader = false) {
   try {
+    const logsToSend = pendingCloudLogs.splice(0, pendingCloudLogs.length);
     const payload = {
       instance_id: daemonInstanceId,
       active_channel_id: activeChan,
-      in_voice: inVoice
+      in_voice: inVoice,
+      logs: logsToSend
     };
     if (registerLeader) {
       payload.register_leader = true;
@@ -797,7 +834,7 @@ function connectGateway() {
 
           // Start 2.5s Cloud Dashboard Sync Loop
           if (syncTimer) clearInterval(syncTimer);
-          syncTimer = setInterval(syncWithCloudWorker, 2500);
+          syncTimer = setInterval(syncWithCloudWorker, 1500);
 
           // Register this runner as the active leader
           reportTelemetryToCloud(localActiveChannelId, localInVoice, "", true);
