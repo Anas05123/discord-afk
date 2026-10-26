@@ -733,6 +733,21 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
           <div id="monUptime" style="font-size: 12px; color: var(--text-muted); margin: 4px 0;">Session Uptime: 00:00:00</div>
           <div id="monLatency" style="font-size: 11px; font-weight: 700; color: var(--green); margin-top: 6px;">Heartbeat Latency: 34 ms (Cloudflare Edge)</div>
         </div>
+
+        <div class="section-card" style="margin-top: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;">
+              <span class="status-indicator online"></span>
+              <span>Live System & Safety Console</span>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn-secondary" style="height: 22px; padding: 0 8px; font-size: 10px;" onclick="clearWebConsole()">Clear</button>
+            </div>
+          </div>
+          <div id="webEventConsole" style="background: #090a0d; border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11px; color: #c9d1d9; height: 180px; overflow-y: auto; line-height: 1.5;">
+            <div style="color: var(--text-muted);">[SYSTEM] Live event console connected. Monitoring voice engine & safety state...</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1219,6 +1234,7 @@ function onChannelDropdownChange(cid) {
 }
 
 async function joinVoiceRoom() {
+  appendWebLog('VOICE', 'Join voice room requested...', 'VOICE');
   const guild_id = document.getElementById('entryGuildId').value.trim();
   const channel_id = document.getElementById('entryChannelId').value.trim();
   const self_mute = document.getElementById('cbMute').checked;
@@ -1250,13 +1266,101 @@ async function joinVoiceRoom() {
   }
 }
 
+const seenLogIds = new Set();
+
+function appendWebLog(tag, msg, level = 'INFO') {
+  const box = document.getElementById('webEventConsole');
+  if (!box) return;
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const ts = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  
+  let color = '#c9d1d9';
+  if (level === 'EMERGENCY' || level === 'ERROR') color = 'var(--red)';
+  else if (level === 'WARN') color = 'var(--yellow)';
+  else if (level === 'SAFETY' || level === 'SUCCESS') color = 'var(--green)';
+  else if (level === 'VOICE') color = 'var(--blurple)';
+
+  const row = document.createElement('div');
+  row.style.marginBottom = '2px';
+  row.innerHTML = '<span style="color:var(--text-muted);">[' + ts + ']</span> <b style="color:' + color + ';">[' + tag + ']</b> <span>' + msg + '</span>';
+  box.appendChild(row);
+  box.scrollTop = box.scrollHeight;
+}
+
+function clearWebConsole() {
+  const box = document.getElementById('webEventConsole');
+  if (box) box.innerHTML = '<div style="color:var(--text-muted);">[SYSTEM] Console cleared.</div>';
+  seenLogIds.clear();
+}
+
+async function triggerEmergencyKillswitch() {
+  appendWebLog('EMERGENCY', 'Triggering Emergency Killswitch! Disconnecting from Discord voice and locking...', 'EMERGENCY');
+  document.getElementById('monStatus').innerHTML = '<span style="color:var(--red);">[LOCKED] Status: EMERGENCY LOCKED (All Joins Blocked)</span>';
+  document.getElementById('sidebarVoice').innerHTML = '<span class="status-indicator locked"></span>Voice: LOCKED';
+  
+  const btn = document.getElementById('btnJoinVoice');
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'not-allowed';
+    btn.textContent = 'Voice Join Locked (Click Reset Lock to Unlock)';
+  }
+
+  try {
+    const res = await fetch('/api/voice', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ action: 'emergency_killswitch', reason: 'Web Dashboard Manual Killswitch' })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      appendWebLog('EMERGENCY', 'SUCCESS: Discord voice disconnected server-side. Auto-joining locked.', 'EMERGENCY');
+      document.getElementById('monRoom').textContent = 'Active Voice Channel: None (Locked)';
+    } else {
+      appendWebLog('ERROR', 'Emergency request returned: ' + JSON.stringify(data), 'ERROR');
+    }
+  } catch (err) {
+    appendWebLog('ERROR', 'Emergency Killswitch network failure: ' + err, 'ERROR');
+  }
+}
+
+async function resetEmergencyLock() {
+  appendWebLog('SAFETY', 'Resetting Emergency Lockout...', 'SAFETY');
+  try {
+    const res = await fetch('/api/voice', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ action: 'unlock_emergency' })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      appendWebLog('SAFETY', 'SUCCESS: Emergency lock released. Safe to join voice room.', 'SAFETY');
+      document.getElementById('monStatus').innerHTML = '<span style="color:var(--text-muted);">Status: Disconnected (Safety lock reset)</span>';
+      document.getElementById('sidebarVoice').innerHTML = '<span class="status-indicator offline"></span>Voice: Offline';
+      const btn = document.getElementById('btnJoinVoice');
+      if (btn) {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+        btn.textContent = 'Join Voice Room (24/7 AFK)';
+      }
+    } else {
+      appendWebLog('ERROR', 'Reset request returned: ' + JSON.stringify(data), 'ERROR');
+    }
+  } catch (err) {
+    appendWebLog('ERROR', 'Reset error: ' + err, 'ERROR');
+  }
+}
+
 async function leaveVoiceRoom() {
+  appendWebLog('VOICE', 'Leave voice room requested. Sending disconnect packet...', 'VOICE');
   await fetch('/api/voice', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({ action: 'leave' })
   });
-  document.getElementById('monStatus').textContent = ' Status: Disconnected from Voice';
+  document.getElementById('monStatus').textContent = 'Status: Disconnected from Voice';
   document.getElementById('monStatus').style.color = 'var(--text-muted)';
   document.getElementById('sidebarVoice').innerHTML = '<span class="status-indicator offline"></span>Voice: Offline';
 }
@@ -1334,6 +1438,29 @@ async function refreshTelemetry() {
   try {
     const r = await fetch('/health');
     const d = await r.json();
+
+    if (d.debug_logs && Array.isArray(d.debug_logs)) {
+      for (const log of d.debug_logs) {
+        const key = (log.ts || '') + '_' + (log.tag || '') + '_' + (log.message || '');
+        if (!seenLogIds.has(key)) {
+          seenLogIds.add(key);
+          const box = document.getElementById('webEventConsole');
+          if (box) {
+            let color = '#c9d1d9';
+            if (log.level === 'EMERGENCY' || log.level === 'ERROR') color = 'var(--red)';
+            else if (log.level === 'WARN') color = 'var(--yellow)';
+            else if (log.level === 'SAFETY' || log.level === 'SUCCESS') color = 'var(--green)';
+            else if (log.level === 'VOICE') color = 'var(--blurple)';
+
+            const row = document.createElement('div');
+            row.style.marginBottom = '2px';
+            row.innerHTML = '<span style="color:var(--text-muted);">[' + (log.ts || '') + ']</span> <b style="color:' + color + ';">[' + (log.tag || 'SYSTEM') + ']</b> <span>' + (log.message || '') + '</span>';
+            box.appendChild(row);
+            box.scrollTop = box.scrollHeight;
+          }
+        }
+      }
+    }
     if (d.emergency_locked) {
       document.getElementById('monStatus').textContent = '[LOCKED] Status: EMERGENCY LOCKED (All Joins Blocked)';
       document.getElementById('monStatus').style.color = 'var(--red)';
@@ -1426,6 +1553,7 @@ export class DiscordAFKSession {
   constructor(ctx, env) {
     this.ctx = ctx;
     this.env = env;
+    this.logs = [];
     this.ws = null;
     this.sequence = null;
     this.userId = "974719260779765790";
@@ -1604,6 +1732,7 @@ export class DiscordAFKSession {
         await this.ctx.storage.put("emergencyLocked", true);
         await this.ctx.storage.put("inVoice", false);
         await this.ctx.storage.delete("activeChannelId");
+        this.addLog("EMERGENCY", "KILLSWITCH", "Emergency Killswitch engaged: Force leave packet sent, room joining frozen.");
 
         // Forceful immediate disconnect via direct Discord REST API
         if (token && this.guildId) {
@@ -1624,6 +1753,7 @@ export class DiscordAFKSession {
       if (body.action === "unlock_emergency") {
         this.emergencyLocked = false;
         await this.ctx.storage.put("emergencyLocked", false);
+        this.addLog("SAFETY", "SAFETY", "Emergency lock cleared: Normal voice operations restored.");
         return new Response(JSON.stringify({ ok: true, emergency_locked: false, status: "unlocked" }), { headers: { "Content-Type": "application/json" } });
       }
       if (body.action === "leave") {
@@ -1631,6 +1761,7 @@ export class DiscordAFKSession {
         await this.ctx.storage.put("inVoice", false);
         this.activeChannelId = null;
         await this.ctx.storage.delete("activeChannelId");
+        this.addLog("VOICE", "LEAVE", "Voice disconnect requested: Left voice room.");
 
         // Forceful immediate disconnect via direct Discord REST API
         if (token && this.guildId) {
@@ -1713,6 +1844,9 @@ export class DiscordAFKSession {
       if (body.in_voice !== undefined) {
         this.liveVoiceConnected = Boolean(body.in_voice);
       }
+      if (body.logs && Array.isArray(body.logs)) {
+        this.addLogs(body.logs);
+      }
       return new Response(JSON.stringify({ ok: true, leader_instance_id: this.leaderInstanceId }), { headers: { "Content-Type": "application/json" } });
     }
 
@@ -1783,7 +1917,7 @@ export class DiscordAFKSession {
       self_deaf: this.selfDeaf !== undefined ? this.selfDeaf : true,
       startTimestampMs: this.startTimestampMs,
       activity: this.activity,
-      debug_logs: this.debugLogs || []
+      debug_logs: this.logs || []
     }, null, 2), {
       headers: { "Content-Type": "application/json" }
     });
