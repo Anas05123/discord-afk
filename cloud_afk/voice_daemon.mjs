@@ -526,10 +526,12 @@ async function syncWithCloudWorker() {
     }
 
     // Check if user clicked Join Voice Room on Web Dashboard
+    let manualJoinTriggered = false;
     if (remote.voice_requested_at && Number(remote.voice_requested_at) > lastHandledVoiceRequestAt) {
       const isInitialBoot = (lastHandledVoiceRequestAt === 0);
       lastHandledVoiceRequestAt = Number(remote.voice_requested_at);
       if (!isInitialBoot) {
+        manualJoinTriggered = true;
         antiGlitch.reset();
         isUserActiveOnOtherClient = false;
         if (userPcYieldTimer) {
@@ -577,8 +579,12 @@ async function syncWithCloudWorker() {
         );
 
         if (isCurrentlyInGeneratedRoom) {
+          if (manualJoinTriggered) {
+            const cName = await resolveChannelName(localActiveChannelId);
+            Logger.info("VOICE", `Active in room: "${cName}" (${localActiveChannelId}) [mute=${desiredMute}, deaf=${desiredDeaf}]`);
+          }
           // Check mute/deaf state enforcement only
-          const needsAudioUpdate = (desiredMute !== lastMute || desiredDeaf !== lastDeaf);
+          const needsAudioUpdate = (desiredMute !== lastMute || desiredDeaf !== lastDeaf || manualJoinTriggered);
           if (needsAudioUpdate && antiGlitch.canAttemptOpcode4("audio_state_enforce")) {
             Logger.info("VOICE", `Enforcing audio state in dynamic room: Mute=${desiredMute}, Deaf=${desiredDeaf}`);
             antiGlitch.recordOpcode4Sent(false);
@@ -800,7 +806,12 @@ function connectGateway() {
                     localDynamicChannelId = localActiveChannelId;
                   }
 
-                  Logger.info("VOICE", `Resumed active voice session from gateway in "${cName}" (${localActiveChannelId})`);
+                  if (myState.session_id && String(myState.session_id) !== String(mySessionId)) {
+                    isUserActiveOnOtherClient = true;
+                    Logger.info("YIELD", `Detected active PC/Mobile voice session in "${cName}" (${localActiveChannelId}). Monitoring without interrupting.`);
+                  } else {
+                    Logger.info("VOICE", `Resumed active voice session from gateway in "${cName}" (${localActiveChannelId})`);
+                  }
                   reportTelemetryToCloud(localActiveChannelId, true, cName);
                   break;
                 }
@@ -860,6 +871,7 @@ function connectGateway() {
 
             // Scenario 1: User joined or moved to a voice channel
             if (newChannelId) {
+              const prevChannelId = localActiveChannelId;
               const cName = await resolveChannelName(newChannelId);
               localActiveChannelId = newChannelId;
               localInVoice = true;
@@ -869,12 +881,15 @@ function connectGateway() {
               // Did another client (PC / Mobile) join or move voice?
               const isOtherClient = Boolean(mySessionId && eventSessionId && eventSessionId !== mySessionId);
               if (isOtherClient) {
+                const wasAlreadyYieldingSameRoom = (isUserActiveOnOtherClient && prevChannelId === newChannelId);
                 isUserActiveOnOtherClient = true;
                 if (userPcYieldTimer) {
                   clearTimeout(userPcYieldTimer);
                   userPcYieldTimer = null;
                 }
-                Logger.info("YIELD", `User active on PC/Mobile in room "${cName}" (${newChannelId}). Daemon yielding voice control.`);
+                if (!wasAlreadyYieldingSameRoom) {
+                  Logger.info("YIELD", `User active on PC/Mobile in room "${cName}" (${newChannelId}). Daemon yielding voice control.`);
+                }
                 reportTelemetryToCloud(newChannelId, true, cName);
                 return;
               }
