@@ -1248,10 +1248,13 @@ async function joinVoiceRoom() {
   try {
     const r = await fetch('/api/voice', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
       body: JSON.stringify({ action: 'join', guild_id, channel_id, self_mute, self_deaf, name: actName })
     });
-    const d = await r.json();
+    const d = await r.json().catch(() => ({ ok: false, error: 'Non-JSON response from server' }));
+    if (!d.ok && d.error) {
+      throw new Error(d.error);
+    }
     const activeChan = d.channel_id || channel_id;
     const chanLabel = d.channel_name ? \`\${d.channel_name} (\${activeChan})\` : activeChan;
     document.getElementById('monStatus').textContent = '[CONNECTED] Status: Connected & In Voice Room: ' + chanLabel;
@@ -1310,10 +1313,10 @@ async function triggerEmergencyKillswitch() {
   try {
     const res = await fetch('/api/voice', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
       body: JSON.stringify({ action: 'emergency_killswitch', reason: 'Web Dashboard Manual Killswitch' })
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({ ok: false, error: 'Non-JSON or error response from server' }));
     if (data.ok) {
       appendWebLog('EMERGENCY', 'SUCCESS: Discord voice disconnected server-side. Auto-joining locked.', 'EMERGENCY');
       document.getElementById('monRoom').textContent = 'Active Voice Channel: None (Locked)';
@@ -1330,10 +1333,10 @@ async function resetEmergencyLock() {
   try {
     const res = await fetch('/api/voice', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
       body: JSON.stringify({ action: 'unlock_emergency' })
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({ ok: false, error: 'Non-JSON or error response from server' }));
     if (data.ok) {
       appendWebLog('SAFETY', 'SUCCESS: Emergency lock released. Safe to join voice room.', 'SAFETY');
       document.getElementById('monStatus').innerHTML = '<span style="color:var(--text-muted);">Status: Disconnected (Safety lock reset)</span>';
@@ -1576,6 +1579,32 @@ export class DiscordAFKSession {
     this.emergencyLocked = false;
   }
 
+  addLog(level, tag, message) {
+    if (!this.logs) this.logs = [];
+    const d = new Date();
+    const pad = n => String(n).padStart(2, "0");
+    const ts = pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+    this.logs.push({
+      level: String(level || "INFO").toUpperCase(),
+      tag: String(tag || "SYSTEM").toUpperCase(),
+      message: String(message || ""),
+      ts: ts
+    });
+    if (this.logs.length > 80) {
+      this.logs.shift();
+    }
+    this.ctx.storage.put("logs", this.logs).catch(() => {});
+  }
+
+  addLogs(newLogs) {
+    if (!Array.isArray(newLogs)) return;
+    for (const log of newLogs) {
+      if (log && typeof log === "object") {
+        this.addLog(log.level, log.tag, log.message);
+      }
+    }
+  }
+
   async initState() {
     const savedSessionStart = await this.ctx.storage.get("sessionStartMs");
     if (savedSessionStart) {
@@ -1586,6 +1615,8 @@ export class DiscordAFKSession {
     }
     const savedLock = await this.ctx.storage.get("emergencyLocked");
     if (savedLock !== undefined) this.emergencyLocked = Boolean(savedLock);
+    const savedLogs = await this.ctx.storage.get("logs");
+    if (savedLogs && Array.isArray(savedLogs)) this.logs = savedLogs;
     const savedLeader = await this.ctx.storage.get("leaderInstanceId");
     if (savedLeader) this.leaderInstanceId = savedLeader;
     const savedAct = await this.ctx.storage.get("activity");
