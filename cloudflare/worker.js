@@ -1258,10 +1258,12 @@ async function joinVoiceRoom() {
     const activeChan = d.channel_id || channel_id;
     const chanLabel = d.channel_name ? (d.channel_name + ' (' + activeChan + ')') : activeChan;
     appendWebLog('VOICE', 'SUCCESS: Voice join dispatched for ' + chanLabel + '. Connecting on Discord Gateway...', 'SUCCESS');
-    document.getElementById('monStatus').textContent = '[CONNECTED] Status: Connected & In Voice Room: ' + chanLabel;
-    document.getElementById('monStatus').style.color = 'var(--green)';
-    document.getElementById('monRoom').textContent = 'Active Voice Channel: ' + chanLabel;
-    document.getElementById('sidebarVoice').innerHTML = '<span class="status-indicator online"></span>Voice: In Room';
+    document.getElementById('monStatus').textContent = '[CONNECTING] Dispatched join for ' + chanLabel + ' — Awaiting Gateway confirmation...';
+    document.getElementById('monStatus').style.color = 'var(--yellow)';
+    document.getElementById('monRoom').textContent = 'Target Voice Channel: ' + chanLabel;
+    document.getElementById('sidebarVoice').innerHTML = '<span class="status-indicator offline" style="background:var(--yellow);"></span>Voice: Connecting...';
+    setTimeout(refreshTelemetry, 1500);
+    setTimeout(refreshTelemetry, 3500);
   } catch (e) {
     appendWebLog('ERROR', 'Failed to join voice room: ' + (e && e.message ? e.message : e), 'ERROR');
     document.getElementById('monStatus').textContent = '[ERROR] Error joining voice room: ' + e;
@@ -1340,9 +1342,11 @@ async function resetEmergencyLock() {
     });
     const data = await res.json().catch(() => ({ ok: false, error: 'Non-JSON or error response from server' }));
     if (data.ok) {
-      appendWebLog('SAFETY', 'SUCCESS: Emergency lock released. Safe to join voice room.', 'SAFETY');
-      document.getElementById('monStatus').innerHTML = '<span style="color:var(--text-muted);">Status: Disconnected (Safety lock reset)</span>';
-      document.getElementById('sidebarVoice').innerHTML = '<span class="status-indicator offline"></span>Voice: Offline';
+      appendWebLog('SAFETY', 'SUCCESS: Emergency lock released. Resuming 24/7 AFK mode...', 'SAFETY');
+      document.getElementById('monStatus').innerHTML = '<span style="color:var(--yellow);">[CONNECTING] Safety lock reset — Resuming 24/7 Voice AFK...</span>';
+      document.getElementById('sidebarVoice').innerHTML = '<span class="status-indicator offline" style="background:var(--yellow);"></span>Voice: Rejoining...';
+      setTimeout(refreshTelemetry, 1500);
+      setTimeout(refreshTelemetry, 3500);
       const btn = document.getElementById('btnJoinVoice');
       if (btn) {
         btn.disabled = false;
@@ -1466,11 +1470,46 @@ async function refreshTelemetry() {
         }
       }
     }
+    const btnJoin = document.getElementById('btnJoinVoice');
     if (d.emergency_locked) {
       document.getElementById('monStatus').textContent = '[LOCKED] Status: EMERGENCY LOCKED (All Joins Blocked)';
       document.getElementById('monStatus').style.color = 'var(--red)';
+      document.getElementById('monRoom').textContent = 'Active Voice Channel: None (Emergency Locked)';
       document.getElementById('sidebarVoice').innerHTML = '<span class="status-indicator locked"></span>Voice: LOCKED';
       document.getElementById('sidebarVoice').className = 'status-item inactive';
+      if (btnJoin) {
+        btnJoin.disabled = true;
+        btnJoin.style.opacity = '0.5';
+        btnJoin.style.cursor = 'not-allowed';
+        btnJoin.textContent = 'Voice Join Locked (Click Reset Lock to Unlock)';
+      }
+    } else {
+      if (btnJoin && btnJoin.disabled) {
+        btnJoin.disabled = false;
+        btnJoin.style.opacity = '1';
+        btnJoin.style.cursor = 'pointer';
+        btnJoin.textContent = 'Join Voice Room (24/7 AFK)';
+      }
+      if (d.live_in_voice && d.active_channel_id) {
+        const cname = d.channel_name ? \`\${d.channel_name} (\${d.active_channel_id})\` : d.active_channel_id;
+        document.getElementById('monStatus').textContent = '[CONNECTED] Status: Connected & In Voice Room: ' + cname;
+        document.getElementById('monStatus').style.color = 'var(--green)';
+        document.getElementById('monRoom').textContent = 'Active Voice Channel: ' + cname;
+        document.getElementById('sidebarVoice').innerHTML = '<span class="status-indicator online"></span>Voice: In Room';
+        document.getElementById('sidebarVoice').className = 'status-item';
+      } else if (d.in_voice) {
+        const targetId = d.requested_channel_id || d.channel_id || '';
+        const cname = d.channel_name ? \`\${d.channel_name} (\${targetId})\` : targetId;
+        document.getElementById('monStatus').textContent = '[CONNECTING] Status: Syncing with 24/7 Voice Engine for ' + cname + '...';
+        document.getElementById('monStatus').style.color = 'var(--yellow)';
+        document.getElementById('monRoom').textContent = 'Target Voice Channel: ' + cname;
+        document.getElementById('sidebarVoice').innerHTML = '<span class="status-indicator offline" style="background:var(--yellow);"></span>Voice: Connecting...';
+      } else {
+        document.getElementById('monStatus').textContent = 'Status: Disconnected from Voice';
+        document.getElementById('monStatus').style.color = 'var(--text-muted)';
+        document.getElementById('monRoom').textContent = 'Active Voice Channel: None';
+        document.getElementById('sidebarVoice').innerHTML = '<span class="status-indicator offline"></span>Voice: Offline';
+      }
     }
     if (d.account) {
       document.getElementById('prevUsername').textContent = d.account;
@@ -1481,11 +1520,6 @@ async function refreshTelemetry() {
     }
     if (d.session_start_ms) {
       sessionStartMs = d.session_start_ms;
-    }
-    if (d.active_channel_id || d.channel_id) {
-      const cid = d.active_channel_id || d.channel_id;
-      const cname = d.channel_name ? \`\${d.channel_name} (\${cid})\` : cid;
-      document.getElementById('monRoom').textContent = 'Active Voice Channel: ' + cname;
     }
     if (d.startTimestampMs) {
       startTimestampMs = d.startTimestampMs;
@@ -1546,7 +1580,7 @@ updatePreview();
 searchCatalog();
 refreshTelemetry();
 loadGuildVoiceChannels();
-setInterval(refreshTelemetry, 6000);
+setInterval(refreshTelemetry, 2500);
 </script>
 </body>
 </html>`;
@@ -1640,6 +1674,9 @@ export class DiscordAFKSession {
       this.channelId = DEFAULT_JTC_CHANNEL;
       await this.ctx.storage.put("channelId", this.channelId);
     }
+    if (savedActiveChan !== undefined) this.activeChannelId = savedActiveChan ? String(savedActiveChan) : null;
+    const savedLiveVoice = await this.ctx.storage.get("liveVoiceConnected");
+    if (savedLiveVoice !== undefined) this.liveVoiceConnected = Boolean(savedLiveVoice);
     const savedInVoice = await this.ctx.storage.get("inVoice");
     if (savedInVoice !== undefined) this.inVoice = Boolean(savedInVoice);
     if (savedChanName) this.channelName = savedChanName;
@@ -1801,11 +1838,16 @@ export class DiscordAFKSession {
       }
       if (body.action === "unlock_emergency") {
         this.emergencyLocked = false;
+        this.inVoice = true;
+        this.voiceRequestedAt = Date.now();
         this.recentJoinTimestamps = [];
         this.consecutiveRapidDrops = 0;
         await this.ctx.storage.put("emergencyLocked", false);
-        this.addLog("SAFETY", "SAFETY", "Emergency lock cleared: Normal voice operations restored.");
-        return new Response(JSON.stringify({ ok: true, emergency_locked: false, status: "unlocked" }), { headers: { "Content-Type": "application/json" } });
+        await this.ctx.storage.put("inVoice", true);
+        await this.ctx.storage.put("voiceRequestedAt", this.voiceRequestedAt);
+        await this.resolveValidChannel(token);
+        this.addLog("SAFETY", "SAFETY", "Emergency lock cleared: Normal 24/7 AFK voice operations resumed.");
+        return new Response(JSON.stringify({ ok: true, emergency_locked: false, in_voice: true, status: "unlocked" }), { headers: { "Content-Type": "application/json" } });
       }
       if (body.action === "leave") {
         this.inVoice = false;
@@ -1893,6 +1935,7 @@ export class DiscordAFKSession {
     }
 
     if (request.method === "POST" && url.pathname.startsWith("/api/telemetry")) {
+      await this.initState();
       const body = await request.json().catch(() => ({}));
       if (body.instance_id) {
         if (body.register_leader || !this.leaderInstanceId) {
@@ -1900,9 +1943,18 @@ export class DiscordAFKSession {
           await this.ctx.storage.put("leaderInstanceId", this.leaderInstanceId);
         }
       }
-      if (body.active_channel_id) {
-        this.activeChannelId = String(body.active_channel_id);
-        await this.ctx.storage.put("activeChannelId", this.activeChannelId);
+      if (body.active_channel_id !== undefined) {
+        if (body.active_channel_id) {
+          this.activeChannelId = String(body.active_channel_id);
+          await this.ctx.storage.put("activeChannelId", this.activeChannelId);
+        } else {
+          this.activeChannelId = null;
+          await this.ctx.storage.delete("activeChannelId");
+        }
+      }
+      if (body.reset_requested_channel) {
+        this.channelId = String(body.reset_requested_channel);
+        await this.ctx.storage.put("channelId", this.channelId);
       }
       if (body.channel_name) {
         this.channelName = String(body.channel_name);
@@ -1910,6 +1962,7 @@ export class DiscordAFKSession {
       }
       if (body.in_voice !== undefined) {
         this.liveVoiceConnected = Boolean(body.in_voice);
+        await this.ctx.storage.put("liveVoiceConnected", this.liveVoiceConnected);
       }
       if (body.logs && Array.isArray(body.logs)) {
         this.addLogs(body.logs);

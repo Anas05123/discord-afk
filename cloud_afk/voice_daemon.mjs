@@ -148,24 +148,32 @@ class AntiGlitchGuard {
     return true;
   }
 
-  recordOpcode4Sent(isJtcLobby = false) {
+  recordOpcode4Sent(isJtcLobby = false, isChannelJoin = true) {
     const now = Date.now();
     this.lastOpcode4SentMs = now;
-    this.recentJoins.push(now);
 
-    // Keep only attempts in last 60 seconds
-    this.recentJoins = this.recentJoins.filter(t => (now - t) < 60000);
+    if (isChannelJoin) {
+      this.recentJoins.push(now);
+      // Keep only join attempts in last 60 seconds
+      this.recentJoins = this.recentJoins.filter(t => (now - t) < 60000);
+    }
 
     if (isJtcLobby) {
       this.isJtcMovePending = true;
       this.jtcMoveDeadline = now + 12000; // 12 seconds maximum wait for JTC move
     }
 
-    // Circuit breaker check: maximum 2 joins in 60s -> AUTO-TRIGGER EMERGENCY KILLSWITCH!
-    if (this.recentJoins.length > 2) {
+    // Self-healing circuit breaker: if > 3 channel joins in 60s, pause for 45s & reset to JTC lobby (DO NOT permanently lock)
+    if (isChannelJoin && this.recentJoins.length > 3) {
       this.consecutiveFailures++;
-      Logger.error("ANTI_GLITCH", `⛔ Rapid join loop detected (${this.recentJoins.length} joins in <60s)! Auto-triggering Emergency Killswitch!`);
-      triggerEmergencyKillswitch(`Auto-Triggered: Rapid join spam loop (${this.recentJoins.length} joins in <60s)`);
+      this.recentJoins = [];
+      Logger.warn("ANTI_GLITCH", `Rapid join attempts detected. Engaging 45s self-healing cooldown and falling back to Join-to-Create lobby.`);
+      if (localChannelId && localChannelId !== DEFAULT_JTC_LOBBY) {
+        deadChannelsCache.add(String(localChannelId));
+        localChannelId = DEFAULT_JTC_LOBBY;
+        reportTelemetryToCloud(localActiveChannelId, localInVoice, "", false, DEFAULT_JTC_LOBBY);
+      }
+      this.triggerCooldown(45, "Self-healing anti-glitch protection before safe AFK rejoin");
       return false;
     }
 
@@ -223,6 +231,10 @@ const antiGlitch = new AntiGlitchGuard();
 // STATE VARIABLES
 // ============================================================================
 const channelNamesCache = new Map();
+const deadChannelsCache = new Set();
+let pendingJoinChannelId = null;
+let pendingJoinDeadline = 0;
+let lastAttemptedSwitchChan = "";
 
 let ws = null;
 let myUserId = null;
@@ -274,6 +286,11 @@ const server = http.createServer((req, res) => {
   }));
 });
 
+server.on("error", (err) => {
+  if (err && err.code === "EADDRINUSE") {
+    Logger.warn("HTTP_HEALTH", `Port ${PORT} already in use locally; continuing Gateway daemon without duplicate health port.`);
+  }
+});
 server.listen(PORT, () => {
   Logger.info("HTTP_HEALTH", `Cloud Health check HTTP server running on port ${PORT}`);
 });
@@ -488,6 +505,12 @@ async function triggerEmergencyKillswitch(reason = "Manual Trigger") {
   } catch (e) {}
 }
 
+async function flushPendingLogsIfNeeded() {
+  if (pendingCloudLogs.length > 0) {
+    await reportTelemetryToCloud(localActiveChannelId, localInVoice);
+  }
+}
+
 async function syncWithCloudWorker() {
   if (!isConnected || !ws || ws.readyState !== 1) return;
 
@@ -499,10 +522,12 @@ async function syncWithCloudWorker() {
     if (!r.ok) return;
     const remote = await r.json();
 
-    // Emergency Killswitch Check from Cloud
+    // Emergency Killswitch Check from Cloud (Manual user trigger only)
     if (remote.emergency_locked) {
       if (!isEmergencyLocked) {
         isEmergencyLocked = true;
+        pendingJoinChannelId = null;
+        pendingJoinDeadline = 0;
         Logger.warn("EMERGENCY", "⛔ Cloud reported Emergency Lockout! Forcefully leaving voice room and locking.");
         if (localInVoice && ws && ws.readyState === 1) {
           try {
@@ -516,13 +541,17 @@ async function syncWithCloudWorker() {
           localDynamicChannelId = null;
         }
       }
+      await flushPendingLogsIfNeeded();
       return;
     } else if (isEmergencyLocked && remote.emergency_locked === false) {
       isEmergencyLocked = false;
       consecutiveRapidDrops = 0;
+      deadChannelsCache.clear();
+      lastAttemptedSwitchChan = "";
+      pendingJoinChannelId = null;
+      pendingJoinDeadline = 0;
       antiGlitch.reset();
-      isUserActiveOnOtherClient = false;
-      Logger.info("SAFETY", "Emergency lockout cleared from Cloud Worker. Normal operation resumed.");
+      Logger.info("SAFETY", "Emergency lockout cleared from Cloud Worker. Normal 24/7 AFK operation resumed.");
     }
 
     // Check if user clicked Join Voice Room on Web Dashboard
@@ -532,6 +561,10 @@ async function syncWithCloudWorker() {
       lastHandledVoiceRequestAt = Number(remote.voice_requested_at);
       if (!isInitialBoot) {
         manualJoinTriggered = true;
+        deadChannelsCache.clear();
+        lastAttemptedSwitchChan = "";
+        pendingJoinChannelId = null;
+        pendingJoinDeadline = 0;
         antiGlitch.reset();
         isUserActiveOnOtherClient = false;
         if (userPcYieldTimer) {
@@ -545,6 +578,7 @@ async function syncWithCloudWorker() {
     // 0. Leader Lock Check
     if (remote.leader_instance_id && remote.leader_instance_id !== daemonInstanceId) {
       Logger.info("LEADER_LOCK", `Newer 24/7 runner (${remote.leader_instance_id}) active. Handing over session cleanly without voice teardown.`);
+      await flushPendingLogsIfNeeded();
       if (ws && ws.readyState === 1) {
         try { ws.close(1000, "Clean runner handover"); } catch (e) {}
       }
@@ -558,93 +592,142 @@ async function syncWithCloudWorker() {
 
     // 2. Sync Voice State
     const shouldBeInVoice = remote.in_voice !== false;
-    let targetChan = remote.requested_channel_id || localChannelId || DEFAULT_JTC_LOBBY;
+    let targetChan = String(remote.requested_channel_id || localChannelId || DEFAULT_JTC_LOBBY);
+    if (deadChannelsCache.has(targetChan)) {
+      targetChan = DEFAULT_JTC_LOBBY;
+    }
     desiredDeaf = remote.self_deaf !== undefined ? Boolean(remote.self_deaf) : true;
     desiredMute = remote.self_mute !== undefined ? Boolean(remote.self_mute) : true;
 
     // Check if user actively joined voice on another client (PC / mobile)
     if (isUserActiveOnOtherClient) {
+      await flushPendingLogsIfNeeded();
       return;
+    }
+
+    // Check if a pending join to a specific channel timed out without Discord letting us in (e.g. full/locked room)
+    if (pendingJoinChannelId && Date.now() > pendingJoinDeadline) {
+      const timedOutChan = pendingJoinChannelId;
+      pendingJoinChannelId = null;
+      pendingJoinDeadline = 0;
+      if (localActiveChannelId !== timedOutChan) {
+        if (timedOutChan !== DEFAULT_JTC_LOBBY) {
+          Logger.warn("VOICE", `Channel ${timedOutChan} did not accept join after 10s (room may be full, locked, or deleted). Falling back to Join-to-Create Lobby (${DEFAULT_JTC_LOBBY}).`);
+          deadChannelsCache.add(timedOutChan);
+          targetChan = DEFAULT_JTC_LOBBY;
+          localChannelId = DEFAULT_JTC_LOBBY;
+          await reportTelemetryToCloud(localActiveChannelId, localInVoice, "", false, DEFAULT_JTC_LOBBY);
+        } else if (!localInVoice) {
+          antiGlitch.triggerCooldown(15, "Awaiting Discord voice server response before retry");
+          await flushPendingLogsIfNeeded();
+          return;
+        }
+      }
     }
 
     if (shouldBeInVoice) {
       // Are we already in a voice channel?
       if (localInVoice && localActiveChannelId) {
-        // If we are in a dynamic channel created by the JTC lobby, and the dashboard requested the lobby,
-        // WE ARE ALREADY IN ITS GENERATED ROOM! DO NOT RE-JOIN THE LOBBY!
-        const isCurrentlyInGeneratedRoom = (
-          localDynamicChannelId &&
-          localActiveChannelId === localDynamicChannelId &&
-          targetChan === DEFAULT_JTC_LOBBY
-        );
-
-        if (isCurrentlyInGeneratedRoom) {
-          if (manualJoinTriggered) {
-            const cName = await resolveChannelName(localActiveChannelId);
-            Logger.info("VOICE", `Active in room: "${cName}" (${localActiveChannelId}) [mute=${desiredMute}, deaf=${desiredDeaf}]`);
-          }
-          // Check mute/deaf state enforcement only
-          const needsAudioUpdate = (desiredMute !== lastMute || desiredDeaf !== lastDeaf || manualJoinTriggered);
-          if (needsAudioUpdate && antiGlitch.canAttemptOpcode4("audio_state_enforce")) {
-            Logger.info("VOICE", `Enforcing audio state in dynamic room: Mute=${desiredMute}, Deaf=${desiredDeaf}`);
-            antiGlitch.recordOpcode4Sent(false);
-            ws.send(JSON.stringify({
-              op: 4,
-              d: {
-                guild_id: String(localGuildId),
-                channel_id: String(localActiveChannelId),
-                self_mute: desiredMute,
-                self_deaf: desiredDeaf
-              }
-            }));
-            lastMute = desiredMute;
-            lastDeaf = desiredDeaf;
-          }
-          return;
-        }
-
-        // Only switch if the dashboard requested an explicitly DIFFERENT specific channel
+        // Check if user explicitly requested a DIFFERENT valid channel that we haven't already tried/failed
         const requestedDifferentSpecificChannel = (
-          remote.requested_channel_id &&
-          remote.requested_channel_id !== localActiveChannelId &&
-          remote.requested_channel_id !== DEFAULT_JTC_LOBBY
+          targetChan &&
+          targetChan !== localActiveChannelId &&
+          targetChan !== DEFAULT_JTC_LOBBY &&
+          !deadChannelsCache.has(targetChan) &&
+          (manualJoinTriggered || targetChan !== lastAttemptedSwitchChan)
         );
 
         if (requestedDifferentSpecificChannel) {
+          const exists = await verifyChannelExists(targetChan);
+          if (!exists) {
+            Logger.warn("VOICE", `Requested channel ${targetChan} no longer exists. Staying in current room (${localActiveChannelId}) and resetting target to lobby.`);
+            deadChannelsCache.add(targetChan);
+            localChannelId = DEFAULT_JTC_LOBBY;
+            await reportTelemetryToCloud(localActiveChannelId, true, "", false, DEFAULT_JTC_LOBBY);
+            await flushPendingLogsIfNeeded();
+            return;
+          }
+
           if (antiGlitch.canAttemptOpcode4("switch_specific_channel")) {
-            Logger.info("VOICE", `Switching to dashboard requested channel: ${remote.requested_channel_id}`);
-            antiGlitch.recordOpcode4Sent(false);
+            Logger.info("VOICE", `Switching to dashboard requested channel: ${targetChan}`);
+            lastAttemptedSwitchChan = targetChan;
+            pendingJoinChannelId = targetChan;
+            pendingJoinDeadline = Date.now() + 10000;
+            if (!antiGlitch.recordOpcode4Sent(false, true)) {
+              await flushPendingLogsIfNeeded();
+              return;
+            }
             ws.send(JSON.stringify({
               op: 4,
               d: {
                 guild_id: String(localGuildId),
-                channel_id: String(remote.requested_channel_id),
+                channel_id: String(targetChan),
                 self_mute: desiredMute,
                 self_deaf: desiredDeaf
               }
             }));
-            localChannelId = remote.requested_channel_id;
-            lastTargetChan = remote.requested_channel_id;
+            localChannelId = targetChan;
+            lastTargetChan = targetChan;
             lastMute = desiredMute;
             lastDeaf = desiredDeaf;
           }
-        }
-      } else {
-        // We are NOT currently in voice. Check if we can safely initiate join
-        if (!antiGlitch.canAttemptOpcode4("join_voice_initial")) {
+          await flushPendingLogsIfNeeded();
           return;
         }
 
-        const isJoiningLobby = (targetChan === DEFAULT_JTC_LOBBY);
-        const exists = await verifyChannelExists(targetChan);
-        if (!exists) {
-          Logger.warn("VOICE", `Target channel ${targetChan} does not exist. Falling back to lobby: ${DEFAULT_JTC_LOBBY}`);
-          targetChan = DEFAULT_JTC_LOBBY;
-          localChannelId = targetChan;
+        // Otherwise we are already in our target room or generated JTC room!
+        if (manualJoinTriggered) {
+          const cName = await resolveChannelName(localActiveChannelId);
+          Logger.info("VOICE", `Active in room: "${cName}" (${localActiveChannelId}) [mute=${desiredMute}, deaf=${desiredDeaf}]`);
         }
 
+        const needsAudioUpdate = (desiredMute !== lastMute || desiredDeaf !== lastDeaf || manualJoinTriggered);
+        if (needsAudioUpdate && antiGlitch.canAttemptOpcode4("audio_state_enforce")) {
+          Logger.info("VOICE", `Enforcing audio state in room: Mute=${desiredMute}, Deaf=${desiredDeaf}`);
+          antiGlitch.recordOpcode4Sent(false, false);
+          ws.send(JSON.stringify({
+            op: 4,
+            d: {
+              guild_id: String(localGuildId),
+              channel_id: String(localActiveChannelId),
+              self_mute: desiredMute,
+              self_deaf: desiredDeaf
+            }
+          }));
+          lastMute = desiredMute;
+          lastDeaf = desiredDeaf;
+        }
+      } else {
+        // We are NOT currently in voice. Wait if a join packet is already in flight
+        if (pendingJoinChannelId && Date.now() < pendingJoinDeadline && !manualJoinTriggered) {
+          await flushPendingLogsIfNeeded();
+          return;
+        }
+
+        if (!antiGlitch.canAttemptOpcode4("join_voice_initial")) {
+          await flushPendingLogsIfNeeded();
+          return;
+        }
+
+        if (targetChan !== DEFAULT_JTC_LOBBY) {
+          const exists = await verifyChannelExists(targetChan);
+          if (!exists) {
+            Logger.warn("VOICE", `Target channel ${targetChan} does not exist. Falling back to lobby: ${DEFAULT_JTC_LOBBY}`);
+            deadChannelsCache.add(targetChan);
+            targetChan = DEFAULT_JTC_LOBBY;
+            localChannelId = targetChan;
+            await reportTelemetryToCloud(null, false, "", false, DEFAULT_JTC_LOBBY);
+          }
+        }
+
+        const isJoiningLobby = (targetChan === DEFAULT_JTC_LOBBY);
         Logger.info("VOICE", `Connecting to Voice Channel: ${targetChan} (Guild: ${localGuildId}) [mute=${desiredMute}, deaf=${desiredDeaf}]`);
-        antiGlitch.recordOpcode4Sent(isJoiningLobby);
+        pendingJoinChannelId = targetChan;
+        pendingJoinDeadline = Date.now() + 10000;
+        if (!antiGlitch.recordOpcode4Sent(isJoiningLobby, true)) {
+          await flushPendingLogsIfNeeded();
+          return;
+        }
         ws.send(JSON.stringify({
           op: 4,
           d: {
@@ -663,7 +746,7 @@ async function syncWithCloudWorker() {
       // Cloud requested Leave Voice Room
       if (localInVoice && antiGlitch.canAttemptOpcode4("leave_voice")) {
         Logger.info("VOICE", "Cloud requested Leave Voice Room");
-        antiGlitch.recordOpcode4Sent(false);
+        antiGlitch.recordOpcode4Sent(false, false);
         ws.send(JSON.stringify({
           op: 4,
           d: {
@@ -676,9 +759,12 @@ async function syncWithCloudWorker() {
         localInVoice = false;
         localActiveChannelId = null;
         localDynamicChannelId = null;
+        pendingJoinChannelId = null;
+        pendingJoinDeadline = 0;
         lastTargetChan = "";
         lastMute = null;
         lastDeaf = null;
+        await reportTelemetryToCloud(null, false, "");
       }
     }
 
@@ -699,21 +785,19 @@ async function syncWithCloudWorker() {
       lastActivityKey = actKey;
     }
 
-    if (pendingCloudLogs.length > 0) {
-      await reportTelemetryToCloud(localActiveChannelId, localInVoice);
-    }
+    await flushPendingLogsIfNeeded();
   } catch (err) {
     // Transient sync network error
   }
 }
 
-async function reportTelemetryToCloud(activeChan, inVoice, chanName = "", registerLeader = false) {
+async function reportTelemetryToCloud(activeChan, inVoice, chanName = "", registerLeader = false, resetRequestedChan = "") {
   try {
     const logsToSend = pendingCloudLogs.splice(0, pendingCloudLogs.length);
     const payload = {
       instance_id: daemonInstanceId,
-      active_channel_id: activeChan,
-      in_voice: inVoice,
+      active_channel_id: activeChan || null,
+      in_voice: Boolean(inVoice),
       logs: logsToSend
     };
     if (registerLeader) {
@@ -721,6 +805,9 @@ async function reportTelemetryToCloud(activeChan, inVoice, chanName = "", regist
     }
     if (chanName) {
       payload.channel_name = chanName;
+    }
+    if (resetRequestedChan) {
+      payload.reset_requested_channel = String(resetRequestedChan);
     }
     await fetch(`${WORKER_URL}/api/telemetry`, {
       method: "POST",
@@ -896,6 +983,8 @@ function connectGateway() {
 
               lastVoiceJoinTimestamp = Date.now();
               consecutiveRapidDrops = 0;
+              pendingJoinChannelId = null;
+              pendingJoinDeadline = 0;
 
               // Check if server JTC bot moved us from lobby into dynamic room
               if (antiGlitch.isJtcMovePending && newChannelId !== DEFAULT_JTC_LOBBY) {
@@ -942,13 +1031,19 @@ function connectGateway() {
               }
 
               const staySec = (Date.now() - lastVoiceJoinTimestamp) / 1000;
-              // AUTO-TRIGGER EMERGENCY KILLSWITCH on 2 consecutive rapid drops (<12s)
+              // Self-healing cooldown on 2 consecutive rapid drops (<12s) instead of permanent lockout
               if (staySec < 12.0 && !isUserActiveOnOtherClient && !isEmergencyLocked && lastVoiceJoinTimestamp > 0) {
                 consecutiveRapidDrops++;
-                Logger.warn("ANTI_GLITCH", `Rapid voice drop detected (${consecutiveRapidDrops}/2) in ${staySec.toFixed(1)}s!`);
+                Logger.warn("ANTI_GLITCH", `Rapid voice drop detected (${consecutiveRapidDrops}/2) in ${staySec.toFixed(1)}s.`);
                 if (consecutiveRapidDrops >= 2) {
-                  Logger.error("ANTI_GLITCH", "⛔ 2 consecutive rapid room drops detected! Auto-triggering Emergency Killswitch to prevent Discord timeout!");
-                  triggerEmergencyKillswitch("Auto-Triggered: 2 consecutive rapid room drops (<12s)");
+                  consecutiveRapidDrops = 0;
+                  Logger.warn("ANTI_GLITCH", "2 consecutive rapid room drops detected. Engaging 45s safety cooldown and falling back to Join-to-Create lobby.");
+                  if (localChannelId && localChannelId !== DEFAULT_JTC_LOBBY) {
+                    deadChannelsCache.add(String(localChannelId));
+                    localChannelId = DEFAULT_JTC_LOBBY;
+                    reportTelemetryToCloud(null, false, "", false, DEFAULT_JTC_LOBBY);
+                  }
+                  antiGlitch.triggerCooldown(45, "Self-healing protection after 2 rapid drops");
                   return;
                 }
               } else {
