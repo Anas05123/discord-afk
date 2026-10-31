@@ -2446,6 +2446,16 @@ export class DiscordAFKSession {
 
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
+    const accept = request.headers.get("Accept") || "";
+    if (!url.pathname.startsWith("/health") && !url.pathname.startsWith("/api") && (accept.includes("text/html") || url.pathname.startsWith("/dashboard") || url.pathname === "/")) {
+      return new Response(DASHBOARD_HTML, {
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"
+        }
+      });
+    }
     const id = env.DISCORD_AFK_SESSION.idFromName("global-24-7-afk-v10");
     const stub = env.DISCORD_AFK_SESSION.get(id);
     return stub.fetch(request);
