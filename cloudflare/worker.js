@@ -1612,6 +1612,7 @@ export class DiscordAFKSession {
     this.startTimestampMs = Date.now();
     this.sessionStartMs = Date.now();
     this.leaderInstanceId = null;
+    this.lastTelemetryAt = 0;
     this.emergencyLocked = false;
   }
 
@@ -1657,6 +1658,8 @@ export class DiscordAFKSession {
     if (savedLogs && Array.isArray(savedLogs)) this.logs = savedLogs;
     const savedLeader = await this.ctx.storage.get("leaderInstanceId");
     if (savedLeader) this.leaderInstanceId = savedLeader;
+    const savedLastTel = await this.ctx.storage.get("lastTelemetryAt");
+    if (savedLastTel) this.lastTelemetryAt = Number(savedLastTel);
     const savedAct = await this.ctx.storage.get("activity");
     const savedStart = await this.ctx.storage.get("startTimestampMs");
     const savedUser = await this.ctx.storage.get("username");
@@ -1937,10 +1940,14 @@ export class DiscordAFKSession {
     if (request.method === "POST" && url.pathname.startsWith("/api/telemetry")) {
       await this.initState();
       const body = await request.json().catch(() => ({}));
+      const now = Date.now();
+      const leaderStale = !this.lastTelemetryAt || ((now - this.lastTelemetryAt) > 25000);
       if (body.instance_id) {
-        if (body.register_leader || !this.leaderInstanceId) {
+        if (body.register_leader || !this.leaderInstanceId || leaderStale || this.leaderInstanceId === String(body.instance_id)) {
           this.leaderInstanceId = String(body.instance_id);
+          this.lastTelemetryAt = now;
           await this.ctx.storage.put("leaderInstanceId", this.leaderInstanceId);
+          await this.ctx.storage.put("lastTelemetryAt", this.lastTelemetryAt);
         }
       }
       if (body.active_channel_id !== undefined) {
@@ -2017,17 +2024,21 @@ export class DiscordAFKSession {
 
     await this.initState();
     const longevitySec = Math.max(0, Math.floor((Date.now() - this.sessionStartMs) / 1000));
+    const leaderAlive = Boolean(this.leaderInstanceId && this.lastTelemetryAt && ((Date.now() - this.lastTelemetryAt) < 25000));
+    const effectiveLiveInVoice = leaderAlive ? Boolean(this.liveVoiceConnected) : false;
     return new Response(JSON.stringify({
-      status: this.emergencyLocked ? "emergency_locked" : (this.inVoice ? "online" : "connected"),
+      status: this.emergencyLocked ? "emergency_locked" : (effectiveLiveInVoice ? "online" : "connected"),
       service: "Discord Studio PRO  -  24/7 Cloud Worker (v10 Modern)",
       version: "v10-modern",
       account: this.username,
       emergency_locked: Boolean(this.emergencyLocked),
       session_start_ms: this.sessionStartMs,
       session_longevity_sec: longevitySec,
-      leader_instance_id: this.leaderInstanceId || null,
+      leader_instance_id: leaderAlive ? this.leaderInstanceId : null,
+      leader_alive: leaderAlive,
+      last_telemetry_ago_sec: this.lastTelemetryAt ? Math.floor((Date.now() - this.lastTelemetryAt) / 1000) : null,
       in_voice: this.inVoice,
-      live_in_voice: this.liveVoiceConnected !== undefined ? this.liveVoiceConnected : this.inVoice,
+      live_in_voice: effectiveLiveInVoice,
       guild_id: this.guildId,
       channel_id: this.activeChannelId || this.channelId,
       active_channel_id: this.activeChannelId,

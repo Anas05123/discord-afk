@@ -77,22 +77,30 @@ class Logger {
 
 Logger.info("INIT", `Discord Voice AFK Runner initialized. Instance: ${daemonInstanceId}`);
 
+const daemonBootMs = Date.now();
 if (IS_GITHUB_ACTIONS) {
-  // GitHub Actions limits jobs to max 360 mins (6h).
-  // Safe scheduled handover at 345 mins (5h 45m) to safely maximize duration.
-  const RUNNER_LIFETIME_MS = 345 * 60 * 1000;
-  setTimeout(() => {
-    Logger.warn("LIFETIME", "GitHub Actions scheduled rotation ceiling reached (5h 45m). Handing over session cleanly...");
-    if (ws && ws.readyState === 1) {
-      try {
-        ws.close(1000, "Safety scheduled handover");
-      } catch (e) {}
+  // GitHub Actions afk.yml has timeout-minutes: 330 (5h 30m) and cron: '0 */5 * * *' (00, 05, 10, 15, 20 UTC).
+  // If a run overlaps the next cron trigger and gets cancelled at 330m, GitHub skips the next scheduled run!
+  // Therefore, exit cleanly 2 minutes before the next 5-hour cron boundary (once running >= 2h) or at 315m max.
+  const MAX_GH_LIFETIME_MS = 315 * 60 * 1000; // 5h 15m (safely under 330m timeout-minutes)
+  setInterval(() => {
+    const uptimeMs = Date.now() - daemonBootMs;
+    const now = new Date();
+    const utcHour = now.getUTCHours();
+    const utcMin = now.getUTCMinutes();
+    const nextHour = (utcHour + 1) % 24;
+    const isApproachingCronBoundary = (nextHour % 5 === 0) && (utcMin >= 58) && (uptimeMs >= 90 * 60 * 1000);
+    if (isApproachingCronBoundary || uptimeMs >= MAX_GH_LIFETIME_MS) {
+      Logger.info("LIFETIME", "Reaching scheduled GitHub Actions cron boundary. Exiting cleanly so next scheduled runner launches without queue skip...");
+      if (ws && ws.readyState === 1) {
+        try { ws.close(1000, "Clean cron boundary handover"); } catch (e) {}
+      }
+      process.exit(0);
     }
-    process.exit(0);
-  }, RUNNER_LIFETIME_MS);
-  Logger.info("LIFETIME", "Environment: GitHub Actions Runner. Safe rotation ceiling configured for 5h 45m.");
+  }, 15000);
+  Logger.info("LIFETIME", "Environment: GitHub Actions Runner. Cron-aligned clean handover configured (max 5h 15m).");
 } else {
-  Logger.info("LIFETIME", "Environment: Persistent Cloud / Container (Render / Koyeb / Docker / Local). Indefinite 24/7/365 session enabled (No artificial shutdown timer; lasts 1+ days continuously).");
+  Logger.info("LIFETIME", "Environment: Persistent Local / Container Daemon. Active/Standby 24/7/365 failover enabled.");
 }
 
 // ============================================================================
@@ -264,6 +272,8 @@ let lastDeaf = null;
 let lastTargetChan = "";
 let lastActivityKey = "";
 let lastHandledVoiceRequestAt = 0;
+let lastTelemetryHeartbeatMs = 0;
+let isStandbyMode = false;
 
 // ============================================================================
 // BUILT-IN HTTP SERVER (PASS CLOUD HEALTH CHECKS)
@@ -575,14 +585,29 @@ async function syncWithCloudWorker() {
       }
     }
 
-    // 0. Leader Lock Check
-    if (remote.leader_instance_id && remote.leader_instance_id !== daemonInstanceId) {
-      Logger.info("LEADER_LOCK", `Newer 24/7 runner (${remote.leader_instance_id}) active. Handing over session cleanly without voice teardown.`);
-      await flushPendingLogsIfNeeded();
-      if (ws && ws.readyState === 1) {
-        try { ws.close(1000, "Clean runner handover"); } catch (e) {}
+    // 0. Leader Lock & Active/Standby Failover Check
+    if (remote.leader_instance_id && remote.leader_instance_id !== daemonInstanceId && remote.leader_alive) {
+      if (IS_GITHUB_ACTIONS) {
+        Logger.info("LEADER_LOCK", `Newer 24/7 runner (${remote.leader_instance_id}) active. Handing over session cleanly without voice teardown.`);
+        await flushPendingLogsIfNeeded();
+        if (ws && ws.readyState === 1) {
+          try { ws.close(1000, "Clean runner handover"); } catch (e) {}
+        }
+        process.exit(0);
+      } else {
+        if (!isStandbyMode) {
+          isStandbyMode = true;
+          Logger.info("LEADER_LOCK", `Cloud runner (${remote.leader_instance_id}) is active. Local daemon entering Standby Failover mode (will auto-reclaim if cloud runner stops).`);
+        }
+        return;
       }
-      process.exit(0);
+    } else if (!remote.leader_instance_id || !remote.leader_alive) {
+      if (isStandbyMode) {
+        isStandbyMode = false;
+        Logger.info("LEADER_LOCK", `Cloud runner inactive. Local daemon reclaiming 24/7 leadership automatically!`);
+      }
+      await reportTelemetryToCloud(localActiveChannelId, localInVoice, "", true);
+      lastTelemetryHeartbeatMs = Date.now();
     }
 
     // 1. Sync Guild ID
@@ -785,7 +810,10 @@ async function syncWithCloudWorker() {
       lastActivityKey = actKey;
     }
 
-    await flushPendingLogsIfNeeded();
+    if (pendingCloudLogs.length > 0 || (Date.now() - lastTelemetryHeartbeatMs) > 8000) {
+      await reportTelemetryToCloud(localActiveChannelId, localInVoice);
+      lastTelemetryHeartbeatMs = Date.now();
+    }
   } catch (err) {
     // Transient sync network error
   }
