@@ -924,7 +924,19 @@ async function handleIncomingDiscordMessage(msg) {
       signal: AbortSignal.timeout(5000)
     }).catch(() => {});
 
-    // 2. If running locally on Windows PC, play chime & auto-send WhatsApp message to +21654096479
+    // 2. Direct Mobile Push Notification via ntfy (Works 24/7 on phone, zero registration, free)
+    fetch("https://ntfy.sh/la2nis-afk", {
+      method: "POST",
+      headers: {
+        "Title": `Discord ${alertType} Alert: ${authorLabel}`,
+        "Priority": "high",
+        "Tags": "bell,loudspeaker"
+      },
+      body: `From: ${authorLabel}\nWhere: ${chanName}\nMessage: ${cleanContent}`,
+      signal: AbortSignal.timeout(4000)
+    }).catch(() => {});
+
+    // 3. If running locally on Windows PC, play chime & auto-send WhatsApp message to +21654096479
     if (!IS_GITHUB_ACTIONS && process.platform === "win32") {
       const now = Date.now();
       if ((now - lastLocalWaPopupMs) > 8000) {

@@ -728,54 +728,72 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
           <button class="btn-secondary" style="width: 100%; height: 30px; font-size: 11px;" onclick="resetEmergencyLock()">Reset Emergency Lock</button>
         </div>
 
-        <div class="section-card" id="waAlertCardTop" style="border: 2px solid #23a55a;">
+        <div class="section-card" id="waAlertCardTop" style="border: 2px solid #5865f2;">
           <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
-            <span>🔔 AFK Message & Mention Alerts (WhatsApp: +21654096479)</span>
-            <span id="waStatusBadge" style="font-size:10px; padding:2px 6px; border-radius:4px; background:var(--bg-input); color:var(--green);">Active</span>
+            <span>📱 24/7 Phone Push Notifications (ntfy) & WhatsApp (+21654096479)</span>
+            <span id="waStatusBadge" style="font-size:10px; padding:2px 6px; border-radius:4px; background:var(--bg-input); color:var(--green);">Active 24/7</span>
           </div>
           <div class="card-desc">
-            Receive instant WhatsApp messages & browser notifications whenever someone DMs you, @mentions you, or chats in your active voice room while you are AFK.
+            Receive instant push notifications with sound directly on your phone whenever someone DMs you, @mentions you, or chats in your voice room. 100% free, zero signup, no bot activation required!
           </div>
+
+          <div style="background:#5865f215; border:1px solid #5865f244; border-radius:8px; padding:10px 12px; margin-bottom:12px;">
+            <div style="font-size:12px; font-weight:700; color:#5865f2; margin-bottom:4px;">📲 Instant 10-Second Phone Setup (No Bot Needed):</div>
+            <div style="font-size:11px; color:var(--text-secondary); line-height:1.5;">
+              1. Download free <b>ntfy</b> app on your phone (Google Play Store or iOS App Store) or open <a href="https://ntfy.sh/la2nis-afk" target="_blank" style="color:#5865f2; text-decoration:underline; font-weight:700;">ntfy.sh/la2nis-afk ↗</a>.<br>
+              2. Tap <b>+</b> and subscribe to topic: <code style="background:var(--bg-surface); padding:2px 6px; border-radius:4px; color:#5865f2; font-weight:700;">la2nis-afk</code>.<br>
+              3. Done! Tap <b>"🔔 Test Phone Push Notification"</b> below to hear your phone ring!
+            </div>
+          </div>
+
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-bottom:10px;">
             <label class="checkbox-row"><input type="checkbox" id="cbNotifyEnabled" checked> Enable Alerts</label>
             <label class="checkbox-row"><input type="checkbox" id="cbNotifyDm" checked> Direct Messages (DMs)</label>
             <label class="checkbox-row"><input type="checkbox" id="cbNotifyMention" checked> @Mentions & Replies</label>
             <label class="checkbox-row"><input type="checkbox" id="cbNotifyVoiceChat" checked> Voice Room Chat</label>
           </div>
+
           <div class="form-group">
-            <label class="form-label">WhatsApp Phone Number (Linked to your WhatsApp):</label>
+            <label class="form-label">Phone Push Notification Topic (ntfy.sh):</label>
+            <div style="display:flex; gap:6px;">
+              <input class="form-input" id="entryNtfyTopic" value="la2nis-afk" placeholder="la2nis-afk" style="flex:1;">
+              <button class="btn-secondary" style="height:36px; padding:0 12px; font-size:11px;" onclick="window.open('https://ntfy.sh/' + (document.getElementById('entryNtfyTopic').value.trim() || 'la2nis-afk'), '_blank')">↗ Open Web Feed</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">WhatsApp Phone Number (+21654096479):</label>
             <input class="form-input" id="entryWaPhone" value="+21654096479" placeholder="+21654096479">
           </div>
+
           <div class="form-group">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-              <label class="form-label" style="margin:0;">24/7 Cloud WhatsApp API Key (CallMeBot) or Webhook URL:</label>
-              <a href="whatsapp://send?phone=34644872157&text=I%20allow%20callmebot%20to%20send%20me%20messages" style="font-size:10px; color:var(--green); font-weight:700; text-decoration:underline;">📲 Click to Get Free Key in WhatsApp App ↗</a>
+            <label class="form-label" style="margin:0;">Cloud WhatsApp API Key (Optional / Webhook):</label>
+            <input class="form-input" id="entryWaApiKey" value="" placeholder="Optional: Discord Webhook URL or CallMeBot API Key">
+            <div style="font-size:10px; color:var(--text-muted); margin-top:3px;">
+              ⚠️ Note: CallMeBot's unofficial WhatsApp bot is currently blocked/down on WhatsApp. Using <b>ntfy</b> above gives you instant, 100% guaranteed phone alerts without waiting for any bot!
             </div>
-            <input class="form-input" id="entryWaApiKey" value="" placeholder="Paste the 7-digit key CallMeBot replies with (or leave blank for PC/Browser alerts)">
           </div>
-          <div style="font-size:10px; color:var(--text-muted); margin-bottom:10px; line-height:1.4; background:var(--bg-input); padding:6px 8px; border-radius:6px;">
-            💡 <b>Your number (+21654096479) is pre-configured!</b> Click <b>"🔔 Test WhatsApp & Alert"</b> below to test right now. For 24/7 Cloud WhatsApp when your PC is off, click <b>"📲 Click to Get Free Key in WhatsApp App"</b>, press Send in WhatsApp, and paste the key it gives you!
-          </div>
+
           <div class="form-row" style="gap:6px;">
             <button class="btn-primary" style="flex:1; height:36px; font-size:11px;" onclick="saveNotificationSettings()">💾 Save Alert Settings</button>
-            <button class="btn-green" style="flex:1; height:36px; font-size:11px;" onclick="testNotificationAlert(true)">🔔 Test WhatsApp (+21654096479) & Alert</button>
+            <button class="btn-green" style="flex:1; height:36px; font-size:11px;" onclick="testNotificationAlert(false)">🔔 Test Phone Push Notification</button>
           </div>
-          <button class="btn-secondary" style="width:100%; height:28px; font-size:10px; margin-top:4px;" onclick="requestBrowserNotificationPerm()">Enable Browser Desktop/Mobile Pop-up & Sound Alerts</button>
+          <button class="btn-secondary" style="width:100%; height:28px; font-size:10px; margin-top:4px;" onclick="testNotificationAlert(true)">💬 Open WhatsApp (+21654096479) Test Draft</button>
         </div>
       </div>
 
       <div class="col-scroll">
-        <div class="section-card" style="border: 2px solid var(--green); background: linear-gradient(180deg, #16241c 0%, var(--bg-surface) 100%);">
+        <div class="section-card" style="border: 2px solid #5865f2; background: linear-gradient(180deg, #181b33 0%, var(--bg-surface) 100%);">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <div class="card-title" style="margin:0; color:#43b581;">🔔 WhatsApp & AFK Alert Center (+21654096479)</div>
-            <span style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; background:#23a55a33; color:#43b581;">24/7 ACTIVE</span>
+            <div class="card-title" style="margin:0; color:#7983f5;">📱 24/7 Phone Push & Alert Center</div>
+            <span style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; background:#5865f233; color:#7983f5;">ACTIVE</span>
           </div>
           <div style="font-size:11px; color:var(--text-secondary); margin-bottom:10px;">
-            Monitoring <b>DMs</b>, <b>@Mentions</b> & <b>Voice Room Chat</b> for <b>la2nis</b> -> Forwarding to <b>+21654096479</b> & Live Inbox below.
+            Active triggers for <b>la2nis</b>: <b>DMs</b>, <b>@Mentions/Replies</b> & <b>Voice Room Chat</b> ➔ Pushed to phone (<b>topic: la2nis-afk</b>) & WhatsApp (<b>+21654096479</b>).
           </div>
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
-            <button class="btn-green" style="flex:1; height:34px; font-size:11px; padding:0 10px;" onclick="testNotificationAlert(true)">🔔 Test Alert & WhatsApp Now</button>
-            <button class="btn-primary" style="flex:1; height:34px; font-size:11px; padding:0 10px;" onclick="openWhatsAppActivation()">📲 Activate 24/7 WhatsApp Bot</button>
+            <button class="btn-green" style="flex:1; height:34px; font-size:11px; padding:0 10px;" onclick="testNotificationAlert(false)">🔔 Ring Phone Now (Test Push)</button>
+            <button class="btn-primary" style="flex:1; height:34px; font-size:11px; padding:0 10px;" onclick="window.open('https://ntfy.sh/' + (document.getElementById('entryNtfyTopic')?.value || 'la2nis-afk'), '_blank')">📱 View Live Alerts on Phone</button>
             <button class="btn-secondary" style="flex:0 0 auto; height:34px; font-size:11px; padding:0 10px;" onclick="document.getElementById('waAlertCardTop').scrollIntoView({behavior:'smooth'})">⚙️ Settings</button>
           </div>
         </div>
@@ -1390,8 +1408,9 @@ async function saveNotificationSettings() {
     dm: document.getElementById('cbNotifyDm').checked,
     mention: document.getElementById('cbNotifyMention').checked,
     voice_chat: document.getElementById('cbNotifyVoiceChat').checked,
-    wa_phone: document.getElementById('entryWaPhone').value.trim(),
-    wa_apikey: document.getElementById('entryWaApiKey').value.trim()
+    wa_phone: (document.getElementById('entryWaPhone')?.value || '+21654096479').trim(),
+    wa_apikey: (document.getElementById('entryWaApiKey')?.value || '').trim(),
+    ntfy_topic: (document.getElementById('entryNtfyTopic')?.value || 'la2nis-afk').trim()
   };
   appendWebLog('SAFETY', 'Saving AFK Notification & WhatsApp settings...', 'SAFETY');
   try {
@@ -1666,9 +1685,10 @@ async function refreshTelemetry() {
       if (document.getElementById('cbNotifyVoiceChat')) document.getElementById('cbNotifyVoiceChat').checked = nc.voice_chat !== false;
       if (nc.wa_phone && document.getElementById('entryWaPhone')) document.getElementById('entryWaPhone').value = nc.wa_phone;
       if (nc.wa_apikey && document.getElementById('entryWaApiKey')) document.getElementById('entryWaApiKey').value = nc.wa_apikey;
+      if (nc.ntfy_topic && document.getElementById('entryNtfyTopic')) document.getElementById('entryNtfyTopic').value = nc.ntfy_topic;
       const badge = document.getElementById('waStatusBadge');
       if (badge) {
-        badge.textContent = (nc.wa_phone && nc.wa_apikey) ? 'WhatsApp Linked' : (nc.enabled !== false ? 'Browser Active' : 'Paused');
+        badge.textContent = 'Active 24/7 (ntfy)';
       }
     }
     if (d.notifications && Array.isArray(d.notifications)) {
@@ -1874,7 +1894,7 @@ export class DiscordAFKSession {
     this.leaderInstanceId = null;
     this.lastTelemetryAt = 0;
     this.emergencyLocked = false;
-    this.notifyConfig = { enabled: true, dm: true, mention: true, voice_chat: true, wa_phone: "+21654096479", wa_apikey: "" };
+    this.notifyConfig = { enabled: true, dm: true, mention: true, voice_chat: true, wa_phone: "+21654096479", wa_apikey: "", ntfy_topic: "la2nis-afk" };
     this.notifications = [];
     this.seenAlertIds = [];
   }
@@ -1882,11 +1902,33 @@ export class DiscordAFKSession {
   async sendWhatsAppAlert(alertObj) {
     const nc = this.notifyConfig || {};
     if (nc.enabled === false) return "Alerts disabled";
-    const phone = String(nc.wa_phone || "").replace(/[^0-9+]/g, "").trim();
+    const phone = String(nc.wa_phone || "+21654096479").replace(/[^0-9+]/g, "").trim();
     const apikey = String(nc.wa_apikey || "").trim();
-    if (!phone || !apikey) {
-      this.addLog("SAFETY", "NOTIFY", "Alert dispatched to Live Inbox & PC WhatsApp (" + (phone || "+21654096479") + ")");
-      return "Delivered to Live Inbox & PC WhatsApp (" + (phone || "+21654096479") + ")";
+    const ntfyTopic = String(nc.ntfy_topic || "la2nis-afk").trim();
+
+    let ntfyResult = "";
+    if (ntfyTopic) {
+      try {
+        const nr = await fetch("https://ntfy.sh/" + encodeURIComponent(ntfyTopic), {
+          method: "POST",
+          headers: {
+            "Title": "Discord " + (alertObj.type || "AFK") + " Alert: " + (alertObj.author || "User"),
+            "Priority": "high",
+            "Tags": "bell,loudspeaker"
+          },
+          body: "From: " + (alertObj.author || "Unknown") + "\nWhere: " + (alertObj.channel_name || "Discord") + "\nMessage: " + (alertObj.content || "")
+        });
+        if (nr.ok) {
+          ntfyResult = "Mobile push sent via ntfy (" + ntfyTopic + ")";
+          this.addLog("SAFETY", "NOTIFY", "Mobile push delivered to phone via ntfy topic: " + ntfyTopic);
+        }
+      } catch (ne) {}
+    }
+
+    if (!apikey) {
+      const summary = ntfyResult ? (ntfyResult + " & Live Inbox") : ("Delivered to Live Inbox & PC WhatsApp (" + phone + ")");
+      this.addLog("SAFETY", "NOTIFY", summary);
+      return summary;
     }
 
     const text = "🔔 *Discord AFK Alert [" + (alertObj.type || "MSG") + "]*\n" +
@@ -2298,8 +2340,9 @@ export class DiscordAFKSession {
           dm: body.dm !== false,
           mention: body.mention !== false,
           voice_chat: body.voice_chat !== false,
-          wa_phone: String(body.wa_phone || "").trim(),
-          wa_apikey: String(body.wa_apikey || "").trim()
+          wa_phone: String(body.wa_phone || "+21654096479").trim(),
+          wa_apikey: String(body.wa_apikey || "").trim(),
+          ntfy_topic: String(body.ntfy_topic || "la2nis-afk").trim()
         };
         await this.ctx.storage.put("notifyConfig", this.notifyConfig);
         this.addLog("SAFETY", "NOTIFY", "Updated AFK Message & WhatsApp notification settings.");

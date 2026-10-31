@@ -2659,6 +2659,10 @@ class MainWindow(ctk.CTk):
 
         def _worker():
             try:
+                try:
+                    requests.post("https://ntfy.sh/la2nis-afk", headers={"Title": "Discord AFK Test Alert", "Priority": "high", "Tags": "bell,loudspeaker"}, data="Hey @la2nis! Your phone notifications are active!", timeout=4)
+                except Exception:
+                    pass
                 requests.post("https://discord-afk-keepalive.anas05123.workers.dev/api/notifications", json={
                     "action": "save_config",
                     "enabled": True,
@@ -2666,7 +2670,8 @@ class MainWindow(ctk.CTk):
                     "mention": True,
                     "voice_chat": True,
                     "wa_phone": phone,
-                    "wa_apikey": apikey
+                    "wa_apikey": apikey,
+                    "ntfy_topic": "la2nis-afk"
                 }, timeout=6)
                 r = requests.post("https://discord-afk-keepalive.anas05123.workers.dev/api/notifications", json={"action": "test"}, timeout=8)
                 d = r.json() if r.ok else {}
