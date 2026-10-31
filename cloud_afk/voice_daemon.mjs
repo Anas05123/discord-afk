@@ -924,19 +924,19 @@ async function handleIncomingDiscordMessage(msg) {
       signal: AbortSignal.timeout(5000)
     }).catch(() => {});
 
-    // 2. If running locally on Windows PC, play audible chime & open WhatsApp Desktop to +21654096479
+    // 2. If running locally on Windows PC, play chime & auto-send WhatsApp message to +21654096479
     if (!IS_GITHUB_ACTIONS && process.platform === "win32") {
       const now = Date.now();
       if ((now - lastLocalWaPopupMs) > 8000) {
         lastLocalWaPopupMs = now;
-        const waText = encodeURIComponent(
+        const waText = (
           `🔔 *Discord ${alertType} Alert*\n` +
           `👤 *From:* ${authorLabel}\n` +
           `📍 *Where:* ${chanName}\n` +
           `💬 *Message:* ${cleanContent}`
         );
-        const psCmd = `powershell -NoProfile -WindowStyle Hidden -Command "[console]::beep(880,140); [console]::beep(1175,220); Start-Process 'whatsapp://send?phone=21654096479&text=${waText}'"`;
-        exec(psCmd, () => {});
+        const sendScript = path.resolve(__dirname, "..", "core", "send_whatsapp.py");
+        exec(`powershell -NoProfile -WindowStyle Hidden -Command "[console]::beep(880,140); [console]::beep(1175,220); python '${sendScript}' '21654096479' '${waText.replace(/'/g, "''")}'"`, () => {});
       }
     }
   } catch (e) {}

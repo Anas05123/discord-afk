@@ -2641,18 +2641,21 @@ class MainWindow(ctk.CTk):
         if hasattr(self, "lbl_wa_status"):
             self.lbl_wa_status.configure(text=f"🔔 Sending Test Alert to {phone} & Live Inbox...", text_color=COLOR_GREEN)
 
-        # Open WhatsApp Desktop directly with the pre-filled test alert if no Cloud API key yet
+        # Auto-send to WhatsApp Desktop directly if no Cloud API key yet
         if not apikey:
-            msg_text = urllib.parse.quote(
-                "🔔 *Discord AFK Test Alert*\n"
-                "👤 *From:* Discord Studio PRO\n"
-                "📍 *Account:* la2nis (24/7 AFK)\n"
-                "💬 *Message:* Hey @la2nis! Your WhatsApp (+21654096479) & Desktop AFK notification system is active!"
-            )
-            try:
-                webbrowser.open(f"whatsapp://send?phone={clean_phone}&text={msg_text}")
-            except Exception:
-                pass
+            def _auto_send_wa():
+                try:
+                    from core.send_whatsapp import send_whatsapp
+                    msg = (
+                        "🔔 *Discord AFK Test Alert*\n"
+                        "👤 *From:* Discord Studio PRO\n"
+                        "📍 *Account:* la2nis (24/7 AFK)\n"
+                        "💬 *Message:* Hey @la2nis! Your WhatsApp (+21654096479) & Desktop AFK notification system is active!"
+                    )
+                    send_whatsapp(clean_phone, msg)
+                except Exception as ex:
+                    print("Auto-send error:", ex)
+            threading.Thread(target=_auto_send_wa, daemon=True).start()
 
         def _worker():
             try:
