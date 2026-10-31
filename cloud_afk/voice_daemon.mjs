@@ -1,6 +1,7 @@
 import fs from "fs";
 import http from "http";
 import path from "path";
+import { exec } from "child_process";
 import { fileURLToPath } from "url";
 
 // ============================================================================
@@ -849,6 +850,136 @@ async function reportTelemetryToCloud(activeChan, inVoice, chanName = "", regist
 // ============================================================================
 // GATEWAY WEBSOCKET CONTROLLER
 // ============================================================================
+const processedMessageIds = new Set();
+let mentionPollTimer = null;
+let lastLocalWaPopupMs = 0;
+
+async function handleIncomingDiscordMessage(msg) {
+  try {
+    // Strictly ignore all bots and webhooks — only real human users allowed!
+    if (!msg || !msg.author || msg.author.bot === true || msg.webhook_id) return;
+
+    const msgId = String(msg.id || "");
+    if (!msgId || processedMessageIds.has(msgId)) return;
+
+    // Ignore old historical messages from before this daemon booted
+    if (msg.timestamp) {
+      const msgTimeMs = Date.parse(msg.timestamp);
+      if (!isNaN(msgTimeMs) && msgTimeMs < (daemonBootMs - 10000)) {
+        processedMessageIds.add(msgId);
+        return;
+      }
+    }
+
+    const isFromSelf = String(msg.author.id) === String(myUserId);
+    const isDm = !msg.guild_id;
+    const contentStr = String(msg.content || "");
+
+    const isMentioned = (
+      (Array.isArray(msg.mentions) && msg.mentions.some(u => String(u.id) === String(myUserId))) ||
+      contentStr.includes(`<@${myUserId}>`) ||
+      contentStr.includes(`<@!${myUserId}>`) ||
+      String(msg.referenced_message?.author?.id || "") === String(myUserId) ||
+      contentStr.toLowerCase().includes("la2nis")
+    );
+    // Allow self-tags (isMentioned) so tagging yourself to test always works!
+    // For un-tagged DMs or voice room chat, only trigger on other people.
+    const isActiveVoiceRoomMsg = Boolean(!isFromSelf && localActiveChannelId && String(msg.channel_id) === String(localActiveChannelId));
+    const isHumanDm = Boolean(!isFromSelf && isDm);
+
+    if (!isMentioned && !isHumanDm && !isActiveVoiceRoomMsg) return;
+
+    processedMessageIds.add(msgId);
+    if (processedMessageIds.size > 300) {
+      const first = processedMessageIds.values().next().value;
+      processedMessageIds.delete(first);
+    }
+
+    const alertType = isHumanDm ? "DM" : (isMentioned ? "MENTION" : "VOICE_CHAT");
+    const authorLabel = msg.author.global_name
+      ? `${msg.author.global_name} (@${msg.author.username})`
+      : `@${msg.author.username || "User"}`;
+    const chanName = isDm
+      ? "Direct Message (DM)"
+      : ((await resolveChannelName(msg.channel_id)) || `Channel ${msg.channel_id}`);
+    const cleanContent = (contentStr || "[Attachment / Sticker / Voice Message]").trim().slice(0, 280);
+
+    Logger.info("NOTIFY", `🔔 [${alertType}] From ${authorLabel} in ${chanName}: "${cleanContent}"`);
+
+    // 1. Forward to Cloud Worker (updates Web Dashboard Inbox, Desktop App Inbox, Browser Push & CallMeBot)
+    fetch(`${WORKER_URL}/api/notifications`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" },
+      body: JSON.stringify({
+        action: "incoming_message",
+        alert: {
+          id: msgId,
+          type: alertType,
+          author: authorLabel,
+          channel_id: String(msg.channel_id || ""),
+          channel_name: chanName,
+          content: cleanContent
+        }
+      }),
+      signal: AbortSignal.timeout(5000)
+    }).catch(() => {});
+
+    // 2. If running locally on Windows PC, play audible chime & open WhatsApp Desktop to +21654096479
+    if (!IS_GITHUB_ACTIONS && process.platform === "win32") {
+      const now = Date.now();
+      if ((now - lastLocalWaPopupMs) > 8000) {
+        lastLocalWaPopupMs = now;
+        const waText = encodeURIComponent(
+          `🔔 *Discord ${alertType} Alert*\n` +
+          `👤 *From:* ${authorLabel}\n` +
+          `📍 *Where:* ${chanName}\n` +
+          `💬 *Message:* ${cleanContent}`
+        );
+        const psCmd = `powershell -NoProfile -WindowStyle Hidden -Command "[console]::beep(880,140); [console]::beep(1175,220); Start-Process 'whatsapp://send?phone=21654096479&text=${waText}'"`;
+        exec(psCmd, () => {});
+      }
+    }
+  } catch (e) {}
+}
+
+async function pollDiscordMentions() {
+  if (!TOKEN || !myUserId || isStandbyMode) return;
+  try {
+    // 1. Check global @mentions across ALL servers
+    const r1 = await fetch("https://discord.com/api/v10/users/@me/mentions?limit=6&roles=true&everyone=false", {
+      headers: { Authorization: TOKEN, "User-Agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(4000)
+    });
+    if (r1.ok) {
+      const mentions = await r1.json();
+      if (Array.isArray(mentions)) {
+        for (const m of mentions.reverse()) {
+          await handleIncomingDiscordMessage(m);
+        }
+      }
+    }
+  } catch (e) {}
+
+  try {
+    // 2. Check mentions in active server (also catches self-tags <@myUserId> used for testing!)
+    if (localGuildId) {
+      const r2 = await fetch(`https://discord.com/api/v10/guilds/${localGuildId}/messages/search?mentions=${myUserId}&include_nsfw=true`, {
+        headers: { Authorization: TOKEN, "User-Agent": "Mozilla/5.0" },
+        signal: AbortSignal.timeout(4000)
+      });
+      if (r2.ok) {
+        const searchData = await r2.json();
+        if (Array.isArray(searchData?.messages)) {
+          for (const group of searchData.messages.slice(0, 4).reverse()) {
+            const hit = Array.isArray(group) ? group.find(x => x.hit) || group[0] : null;
+            if (hit) await handleIncomingDiscordMessage(hit);
+          }
+        }
+      }
+    }
+  } catch (e) {}
+}
+
 function connectGateway() {
   if (!TOKEN) {
     Logger.error("AUTH", "No DISCORD_TOKEN provided. Please set DISCORD_TOKEN in GitHub Secrets.");
@@ -958,6 +1089,26 @@ function connectGateway() {
             } catch (e) {}
           }
 
+          // Subscribe to Guilds via Opcode 37 & Opcode 14 so Discord Gateway streams all live MESSAGE_CREATE events!
+          try {
+            const subs = {};
+            if (Array.isArray(data.d?.guilds)) {
+              for (const g of data.d.guilds.slice(0, 50)) {
+                if (g?.id) subs[String(g.id)] = { typing: true, activities: true, threads: true };
+              }
+            }
+            if (localGuildId) {
+              subs[String(localGuildId)] = { typing: true, activities: true, threads: true };
+            }
+            ws.send(JSON.stringify({ op: 37, d: { subscriptions: subs } }));
+            if (localGuildId) {
+              ws.send(JSON.stringify({ op: 14, d: { guild_id: String(localGuildId), typing: true, activities: true, threads: true } }));
+            }
+          } catch (e) {}
+
+          if (mentionPollTimer) clearInterval(mentionPollTimer);
+          mentionPollTimer = setInterval(pollDiscordMentions, 5000);
+
           // Start 2.5s Cloud Dashboard Sync Loop
           if (syncTimer) clearInterval(syncTimer);
           syncTimer = setInterval(syncWithCloudWorker, 1500);
@@ -977,48 +1128,7 @@ function connectGateway() {
         } else if (data.t === "GUILD_CREATE") {
           cacheGuildChannels([data.d]);
         } else if (data.t === "MESSAGE_CREATE") {
-          const msg = data.d;
-          if (msg && msg.author && String(msg.author.id) !== String(myUserId) && !msg.author.bot) {
-            const isDm = !msg.guild_id;
-            const contentStr = String(msg.content || "");
-            const isMentioned = (
-              (Array.isArray(msg.mentions) && msg.mentions.some(u => String(u.id) === String(myUserId))) ||
-              contentStr.includes(`<@${myUserId}>`) ||
-              contentStr.includes(`<@!${myUserId}>`) ||
-              String(msg.referenced_message?.author?.id || "") === String(myUserId) ||
-              contentStr.toLowerCase().includes("la2nis")
-            );
-            const isActiveVoiceRoomMsg = Boolean(localActiveChannelId && String(msg.channel_id) === String(localActiveChannelId));
-
-            if (isDm || isMentioned || isActiveVoiceRoomMsg) {
-              const alertType = isDm ? "DM" : (isActiveVoiceRoomMsg && !isMentioned ? "VOICE_CHAT" : "MENTION");
-              const authorLabel = msg.author.global_name
-                ? `${msg.author.global_name} (@${msg.author.username})`
-                : `@${msg.author.username || "User"}`;
-              const chanName = isDm
-                ? "Direct Message (DM)"
-                : ((await resolveChannelName(msg.channel_id)) || `Channel ${msg.channel_id}`);
-              const cleanContent = (contentStr || "[Attachment / Sticker / Voice Message]").trim().slice(0, 280);
-
-              Logger.info("NOTIFY", `🔔 [${alertType}] From ${authorLabel} in ${chanName}: "${cleanContent}"`);
-              fetch(`${WORKER_URL}/api/notifications`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" },
-                body: JSON.stringify({
-                  action: "incoming_message",
-                  alert: {
-                    id: String(msg.id || Date.now()),
-                    type: alertType,
-                    author: authorLabel,
-                    channel_id: String(msg.channel_id || ""),
-                    channel_name: chanName,
-                    content: cleanContent
-                  }
-                }),
-                signal: AbortSignal.timeout(5000)
-              }).catch(() => {});
-            }
-          }
+          handleIncomingDiscordMessage(data.d);
         }
 
         // VOICE_STATE_UPDATE
