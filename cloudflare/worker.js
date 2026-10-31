@@ -749,7 +749,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
           <div class="form-group">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
               <label class="form-label" style="margin:0;">24/7 Cloud WhatsApp API Key (CallMeBot) or Webhook URL:</label>
-              <a href="whatsapp://send?phone=34644718199&text=I%20allow%20callmebot%20to%20send%20me%20messages" style="font-size:10px; color:var(--green); font-weight:700; text-decoration:underline;">📲 Click to Get Free Key in WhatsApp App ↗</a>
+              <a href="whatsapp://send?phone=34644872157&text=I%20allow%20callmebot%20to%20send%20me%20messages" style="font-size:10px; color:var(--green); font-weight:700; text-decoration:underline;">📲 Click to Get Free Key in WhatsApp App ↗</a>
             </div>
             <input class="form-input" id="entryWaApiKey" value="" placeholder="Paste the 7-digit key CallMeBot replies with (or leave blank for PC/Browser alerts)">
           </div>
@@ -1427,7 +1427,7 @@ function openWhatsAppPanel() {
 }
 
 function openWhatsAppActivation() {
-  window.location.href = 'whatsapp://send?phone=34644718199&text=I%20allow%20callmebot%20to%20send%20me%20messages';
+  window.location.href = 'whatsapp://send?phone=34644872157&text=I%20allow%20callmebot%20to%20send%20me%20messages';
 }
 
 async function testNotificationAlert(openDirectWa = false) {

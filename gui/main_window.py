@@ -2528,7 +2528,7 @@ class MainWindow(ctk.CTk):
             fg_color=COLOR_GREEN,
             hover_color="#1a6334",
             font=ctk.CTkFont(size=10, weight="bold"),
-            command=lambda: webbrowser.open("whatsapp://send?phone=34644718199&text=I%20allow%20callmebot%20to%20send%20me%20messages")
+            command=lambda: webbrowser.open("whatsapp://send?phone=34644872157&text=I%20allow%20callmebot%20to%20send%20me%20messages")
         ).pack(side="right")
 
         self.entry_wa_apikey = ctk.CTkEntry(cfg_card, placeholder_text="Paste key from CallMeBot for 24/7 Cloud delivery (or leave empty for PC WhatsApp App)", height=36, fg_color=BG_INPUT, border_color=BORDER_COLOR)
