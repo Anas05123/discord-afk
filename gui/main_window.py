@@ -2,6 +2,11 @@ import os
 import time
 import threading
 import webbrowser
+import urllib.parse
+try:
+    import winsound
+except Exception:
+    winsound = None
 import requests
 from io import BytesIO
 from typing import Optional, Dict, Any, List
@@ -165,6 +170,7 @@ class MainWindow(ctk.CTk):
             ("activity", "◈  Activity Studio"),
             ("quests", "◈  Discord Quests"),
             ("voice", "◈  Voice Room AFK"),
+            ("alerts", "🔔  WhatsApp & Alerts"),
             ("games", "◈  Game Catalog"),
             ("cloud", "◈  24/7 Cloud Guide")
         ]
@@ -232,11 +238,15 @@ class MainWindow(ctk.CTk):
                 btn.configure(fg_color="transparent", text_color=TEXT_SECONDARY, border_width=0)
 
     def _init_pages(self):
+        self._seen_cloud_alert_ids = set()
+        self._initial_cloud_alerts_loaded = False
         self.pages["activity"] = self._create_activity_page()
         self.pages["quests"] = self._create_quests_page()
         self.pages["voice"] = self._create_voice_page()
+        self.pages["alerts"] = self._create_alerts_page()
         self.pages["games"] = self._create_games_page()
         self.pages["cloud"] = self._create_cloud_page()
+        self.after(2000, self._poll_cloud_notifications)
 
     # =========================================================================
     # PAGE 1: ACTIVITY STUDIO
@@ -1202,9 +1212,39 @@ class MainWindow(ctk.CTk):
         )
         self.btn_unlock_emergency.pack(fill="x")
 
-        # Right Column: Telemetry Card
-        right_panel = ctk.CTkFrame(page, fg_color="transparent")
+        # Right Column: Telemetry & WhatsApp Quick Card
+        right_panel = ctk.CTkScrollableFrame(page, fg_color="transparent")
         right_panel.grid(row=1, column=1, sticky="nsew", padx=(10, 20), pady=(0, 16))
+
+        wa_quick_card = self._create_section_card(right_panel, "🔔 WhatsApp & AFK Alerts (+21654096479)")
+        wa_quick_card.configure(border_color=COLOR_GREEN, border_width=2)
+        ctk.CTkLabel(
+            wa_quick_card,
+            text="Instant WhatsApp (+21654096479) & PC alerts for DMs, @Mentions & Voice Chat.",
+            font=ctk.CTkFont(family="Segoe UI", size=11),
+            text_color=TEXT_SECONDARY,
+            anchor="w"
+        ).pack(fill="x", padx=14, pady=(0, 6))
+        wa_q_btns = ctk.CTkFrame(wa_quick_card, fg_color="transparent")
+        wa_q_btns.pack(fill="x", padx=14, pady=(0, 10))
+        ctk.CTkButton(
+            wa_q_btns,
+            text="🔔 Test WhatsApp (+21654096479) & Alert",
+            height=34,
+            fg_color=COLOR_GREEN,
+            hover_color="#1a6334",
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            command=self._test_whatsapp_alert
+        ).pack(side="left", fill="x", expand=True, padx=(0, 6))
+        ctk.CTkButton(
+            wa_q_btns,
+            text="⚙️ Alert Settings & Inbox",
+            height=34,
+            fg_color=COLOR_BLURPLE,
+            hover_color="#4752c4",
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            command=lambda: self._switch_page("alerts")
+        ).pack(side="left")
 
         m_card = self._create_section_card(right_panel, "Live Room Telemetry")
 
@@ -2416,6 +2456,266 @@ class MainWindow(ctk.CTk):
         elif "1" in choice:
             self.quest_spoofer.set_target_duration(1)
             self.lbl_quest_target_note.configure(text="Quest Duration: 1 Minute (Test Mode)")
+
+
+    # =========================================================================
+    # PAGE: WHATSAPP & AFK ALERTS (+21654096479)
+    # =========================================================================
+    def _create_alerts_page(self) -> ctk.CTkFrame:
+        page = ctk.CTkFrame(self.viewport, fg_color="transparent")
+        page.grid_columnconfigure(0, weight=6)
+        page.grid_columnconfigure(1, weight=5)
+        page.grid_rowconfigure(1, weight=1)
+
+        top_bar = ctk.CTkFrame(page, fg_color="transparent", height=50)
+        top_bar.grid(row=0, column=0, columnspan=2, sticky="ew", padx=24, pady=(16, 8))
+
+        title_box = ctk.CTkFrame(top_bar, fg_color="transparent")
+        title_box.pack(side="left")
+        ctk.CTkLabel(
+            title_box,
+            text="🔔 WhatsApp & AFK Message Alerts (+21654096479)",
+            font=ctk.CTkFont(family="Segoe UI", size=19, weight="bold"),
+            text_color=TEXT_PRIMARY
+        ).pack(anchor="w")
+        ctk.CTkLabel(
+            title_box,
+            text="Get instant WhatsApp messages & Desktop notifications whenever someone DMs you, @mentions you, or chats in your voice room.",
+            font=ctk.CTkFont(family="Segoe UI", size=12),
+            text_color=TEXT_SECONDARY
+        ).pack(anchor="w")
+
+        ctk.CTkButton(
+            top_bar,
+            text="🔔 TEST WHATSAPP & ALERT NOW",
+            height=38,
+            fg_color=COLOR_GREEN,
+            hover_color="#1a6334",
+            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
+            command=self._test_whatsapp_alert
+        ).pack(side="right")
+
+        left_scroll = ctk.CTkScrollableFrame(page, fg_color="transparent")
+        left_scroll.grid(row=1, column=0, sticky="nsew", padx=(20, 10), pady=(0, 16))
+
+        cfg_card = self._create_section_card(left_scroll, "📲 WhatsApp (+21654096479) & Trigger Configuration")
+        cfg_card.configure(border_color=COLOR_GREEN, border_width=1)
+
+        self.var_notify_enabled = ctk.BooleanVar(value=True)
+        self.var_notify_dm = ctk.BooleanVar(value=True)
+        self.var_notify_mention = ctk.BooleanVar(value=True)
+        self.var_notify_voice_chat = ctk.BooleanVar(value=True)
+
+        cb_grid = ctk.CTkFrame(cfg_card, fg_color="transparent")
+        cb_grid.pack(fill="x", padx=14, pady=(4, 10))
+        ctk.CTkCheckBox(cb_grid, text="Enable All Alerts", variable=self.var_notify_enabled, fg_color=COLOR_GREEN, font=ctk.CTkFont(size=12, weight="bold")).grid(row=0, column=0, sticky="w", padx=(0, 20), pady=4)
+        ctk.CTkCheckBox(cb_grid, text="Direct Messages (DMs)", variable=self.var_notify_dm, fg_color=COLOR_BLURPLE, font=ctk.CTkFont(size=12)).grid(row=0, column=1, sticky="w", pady=4)
+        ctk.CTkCheckBox(cb_grid, text="Server @Mentions & Replies", variable=self.var_notify_mention, fg_color=COLOR_BLURPLE, font=ctk.CTkFont(size=12)).grid(row=1, column=0, sticky="w", padx=(0, 20), pady=4)
+        ctk.CTkCheckBox(cb_grid, text="Active Voice Room Chat", variable=self.var_notify_voice_chat, fg_color=COLOR_BLURPLE, font=ctk.CTkFont(size=12)).grid(row=1, column=1, sticky="w", pady=4)
+
+        ctk.CTkLabel(cfg_card, text="Your WhatsApp Phone Number (with Country Code):", font=ctk.CTkFont(size=11, weight="bold"), text_color=TEXT_SECONDARY).pack(anchor="w", padx=14, pady=(6, 2))
+        self.entry_wa_phone = ctk.CTkEntry(cfg_card, height=36, fg_color=BG_INPUT, border_color=BORDER_COLOR)
+        self.entry_wa_phone.pack(fill="x", padx=14, pady=(0, 8))
+        self.entry_wa_phone.insert(0, "+21654096479")
+
+        key_head = ctk.CTkFrame(cfg_card, fg_color="transparent")
+        key_head.pack(fill="x", padx=14, pady=(4, 2))
+        ctk.CTkLabel(key_head, text="24/7 Cloud WhatsApp Key (CallMeBot) or Webhook URL:", font=ctk.CTkFont(size=11, weight="bold"), text_color=TEXT_SECONDARY).pack(side="left")
+        ctk.CTkButton(
+            key_head,
+            text="📲 1-Click: Get Free Key in WhatsApp App",
+            height=24,
+            fg_color=COLOR_GREEN,
+            hover_color="#1a6334",
+            font=ctk.CTkFont(size=10, weight="bold"),
+            command=lambda: webbrowser.open("whatsapp://send?phone=34644718199&text=I%20allow%20callmebot%20to%20send%20me%20messages")
+        ).pack(side="right")
+
+        self.entry_wa_apikey = ctk.CTkEntry(cfg_card, placeholder_text="Paste key from CallMeBot for 24/7 Cloud delivery (or leave empty for PC WhatsApp App)", height=36, fg_color=BG_INPUT, border_color=BORDER_COLOR)
+        self.entry_wa_apikey.pack(fill="x", padx=14, pady=(0, 8))
+
+        help_lbl = ctk.CTkLabel(
+            cfg_card,
+            text=(
+                "💡 How it works:\n"
+                "• Your WhatsApp number (+21654096479) is already saved & active!\n"
+                "• Click '🔔 TEST WHATSAPP & ALERT NOW' below to test sound, inbox & open WhatsApp Desktop directly.\n"
+                "• For 24/7 Cloud delivery when your PC is off: click '📲 1-Click: Get Free Key in WhatsApp App', hit Send in WhatsApp, and paste the key above!"
+            ),
+            font=ctk.CTkFont(size=11),
+            text_color=TEXT_SECONDARY,
+            justify="left",
+            wraplength=480
+        )
+        help_lbl.pack(anchor="w", padx=14, pady=(2, 10))
+
+        btn_row = ctk.CTkFrame(cfg_card, fg_color="transparent")
+        btn_row.pack(fill="x", padx=14, pady=(4, 14))
+        ctk.CTkButton(
+            btn_row,
+            text="💾 Save Alert Settings",
+            height=40,
+            fg_color=COLOR_BLURPLE,
+            hover_color="#4752c4",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            command=self._save_whatsapp_settings
+        ).pack(side="left", fill="x", expand=True, padx=(0, 6))
+        ctk.CTkButton(
+            btn_row,
+            text="🔔 Test WhatsApp (+21654096479) & Alert",
+            height=40,
+            fg_color=COLOR_GREEN,
+            hover_color="#1a6334",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            command=self._test_whatsapp_alert
+        ).pack(side="left", fill="x", expand=True)
+
+        self.lbl_wa_status = ctk.CTkLabel(cfg_card, text="✅ Active for +21654096479 (Synced with 24/7 Cloud Worker)", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_GREEN)
+        self.lbl_wa_status.pack(anchor="w", padx=14, pady=(0, 12))
+
+        # Right Column: Live Inbox
+        right_panel = ctk.CTkFrame(page, fg_color="transparent")
+        right_panel.grid(row=1, column=1, sticky="nsew", padx=(10, 20), pady=(0, 16))
+
+        inbox_card = self._create_section_card(right_panel, "📩 Live DMs, @Mentions & Voice Chat Inbox")
+        self.txt_alerts_inbox = ctk.CTkTextbox(
+            inbox_card,
+            height=380,
+            font=ctk.CTkFont(family="Consolas", size=11),
+            fg_color="#090a0d",
+            text_color="#f2f3f5",
+            wrap="word",
+            corner_radius=8
+        )
+        self.txt_alerts_inbox.pack(fill="both", expand=True, padx=14, pady=(4, 8))
+        self.txt_alerts_inbox.insert("end", "[SYSTEM] Monitoring DMs, @Mentions & Voice Room Chat 24/7 for la2nis (+21654096479)...\n")
+
+        inbox_btns = ctk.CTkFrame(inbox_card, fg_color="transparent")
+        inbox_btns.pack(fill="x", padx=14, pady=(0, 12))
+        ctk.CTkButton(
+            inbox_btns,
+            text="Clear Inbox",
+            height=28,
+            width=100,
+            fg_color="#262933",
+            hover_color="#373c4a",
+            font=ctk.CTkFont(size=11),
+            command=self._clear_alerts_inbox
+        ).pack(side="right")
+
+        return page
+
+    def _play_alert_sound(self):
+        if winsound:
+            threading.Thread(target=lambda: (winsound.Beep(880, 140), winsound.Beep(1175, 220)), daemon=True).start()
+
+    def _save_whatsapp_settings(self):
+        phone = self.entry_wa_phone.get().strip() or "+21654096479"
+        apikey = self.entry_wa_apikey.get().strip()
+        payload = {
+            "action": "save_config",
+            "enabled": bool(self.var_notify_enabled.get()),
+            "dm": bool(self.var_notify_dm.get()),
+            "mention": bool(self.var_notify_mention.get()),
+            "voice_chat": bool(self.var_notify_voice_chat.get()),
+            "wa_phone": phone,
+            "wa_apikey": apikey
+        }
+        self.lbl_wa_status.configure(text=f"⏳ Saving settings for {phone}...", text_color=COLOR_YELLOW)
+        def _worker():
+            try:
+                r = requests.post("https://discord-afk-keepalive.anas05123.workers.dev/api/notifications", json=payload, timeout=8)
+                if r.ok:
+                    self.after(0, lambda: self.lbl_wa_status.configure(text=f"✅ Saved! Active for {phone} (Synced with 24/7 Cloud)", text_color=COLOR_GREEN))
+                else:
+                    self.after(0, lambda: self.lbl_wa_status.configure(text=f"⚠️ Cloud returned HTTP {r.status_code}", text_color=COLOR_RED))
+            except Exception as e:
+                self.after(0, lambda: self.lbl_wa_status.configure(text=f"⚠️ Network error: {e}", text_color=COLOR_RED))
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _test_whatsapp_alert(self):
+        self._play_alert_sound()
+        phone = (self.entry_wa_phone.get().strip() if hasattr(self, "entry_wa_phone") else "+21654096479") or "+21654096479"
+        apikey = (self.entry_wa_apikey.get().strip() if hasattr(self, "entry_wa_apikey") else "")
+        clean_phone = "".join(ch for ch in phone if ch.isdigit()) or "21654096479"
+        if hasattr(self, "lbl_wa_status"):
+            self.lbl_wa_status.configure(text=f"🔔 Sending Test Alert to {phone} & Live Inbox...", text_color=COLOR_GREEN)
+
+        # Open WhatsApp Desktop directly with the pre-filled test alert if no Cloud API key yet
+        if not apikey:
+            msg_text = urllib.parse.quote(
+                "🔔 *Discord AFK Test Alert*\n"
+                "👤 *From:* Discord Studio PRO\n"
+                "📍 *Account:* la2nis (24/7 AFK)\n"
+                "💬 *Message:* Hey @la2nis! Your WhatsApp (+21654096479) & Desktop AFK notification system is active!"
+            )
+            try:
+                webbrowser.open(f"whatsapp://send?phone={clean_phone}&text={msg_text}")
+            except Exception:
+                pass
+
+        def _worker():
+            try:
+                requests.post("https://discord-afk-keepalive.anas05123.workers.dev/api/notifications", json={
+                    "action": "save_config",
+                    "enabled": True,
+                    "dm": True,
+                    "mention": True,
+                    "voice_chat": True,
+                    "wa_phone": phone,
+                    "wa_apikey": apikey
+                }, timeout=6)
+                r = requests.post("https://discord-afk-keepalive.anas05123.workers.dev/api/notifications", json={"action": "test"}, timeout=8)
+                d = r.json() if r.ok else {}
+                wa_res = d.get("wa_result", "Dispatched!")
+                self.after(0, lambda: self._append_voice_log(f"[NOTIFY] 🔔 Test Alert sent to {phone}! ({wa_res})"))
+                if hasattr(self, "lbl_wa_status"):
+                    self.after(0, lambda: self.lbl_wa_status.configure(text=f"✅ Test Alert Dispatched to {phone}! ({wa_res})", text_color=COLOR_GREEN))
+            except Exception as e:
+                if hasattr(self, "lbl_wa_status"):
+                    self.after(0, lambda: self.lbl_wa_status.configure(text=f"⚠️ Test error: {e}", text_color=COLOR_RED))
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _clear_alerts_inbox(self):
+        if hasattr(self, "txt_alerts_inbox"):
+            self.txt_alerts_inbox.delete("1.0", "end")
+            self.txt_alerts_inbox.insert("end", "[SYSTEM] Inbox cleared.\n")
+        def _worker():
+            try:
+                requests.post("https://discord-afk-keepalive.anas05123.workers.dev/api/notifications", json={"action": "clear_inbox"}, timeout=6)
+            except Exception:
+                pass
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _poll_cloud_notifications(self):
+        def _worker():
+            try:
+                r = requests.get("https://discord-afk-keepalive.anas05123.workers.dev/health", timeout=5)
+                if r.ok:
+                    d = r.json()
+                    notifs = d.get("notifications") or []
+                    new_items = []
+                    for item in notifs:
+                        aid = str(item.get("id") or f"{item.get('ts')}_{item.get('author')}")
+                        if aid not in self._seen_cloud_alert_ids:
+                            self._seen_cloud_alert_ids.add(aid)
+                            new_items.append(item)
+                    if new_items:
+                        def _update_ui():
+                            for it in new_items:
+                                line = f"[{it.get('ts', '')}] 🔔 [{it.get('type', 'ALERT')}] {it.get('author', 'User')} in {it.get('channel_name', 'Discord')}: {it.get('content', '')}\n"
+                                if hasattr(self, "txt_alerts_inbox"):
+                                    self.txt_alerts_inbox.insert("end", line)
+                                    self.txt_alerts_inbox.see("end")
+                                self._append_voice_log(line.strip())
+                            if self._initial_cloud_alerts_loaded:
+                                self._play_alert_sound()
+                        self.after(0, _update_ui)
+                    self._initial_cloud_alerts_loaded = True
+            except Exception:
+                pass
+        threading.Thread(target=_worker, daemon=True).start()
+        self.after(3500, self._poll_cloud_notifications)
 
     def _minimize_to_tray(self):
         self.withdraw()

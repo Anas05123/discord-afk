@@ -388,6 +388,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
     <button class="nav-btn active" id="nav-activity" onclick="switchPage('activity')"><svg class="nav-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line></svg><span>Activity Studio</span></button>
     <button class="nav-btn" id="nav-quests" onclick="switchPage('quests')"><svg class="nav-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg><span>Discord Quests</span></button>
     <button class="nav-btn" id="nav-voice" onclick="switchPage('voice')"><svg class="nav-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg><span>Voice Room AFK</span></button>
+    <button class="nav-btn" id="nav-alerts" onclick="openWhatsAppPanel()" style="border: 1px solid #23a55a66; background: #23a55a15; color: #f2f3f5;"><span style="margin-right:6px;">🔔</span><span>WhatsApp & Alerts</span></button>
     <button class="nav-btn" id="nav-games" onclick="switchPage('games')"><svg class="nav-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" x2="10" y1="12" y2="12"></line><line x1="8" x2="8" y1="10" y2="14"></line><line x1="15" x2="15.01" y1="13" y2="13"></line><line x1="18" x2="18.01" y1="11" y2="11"></line><rect width="20" height="12" x="2" y="6" rx="2"></rect></svg><span>Game Catalog</span></button>
     <button class="nav-btn" id="nav-cloud" onclick="switchPage('cloud')"><svg class="nav-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg><span>24/7 Cloud Guide</span></button>
   </div>
@@ -664,8 +665,12 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
   <div class="page" id="page-voice">
     <div class="top-bar">
       <div>
-        <div class="page-title">Voice Room AFK Connection</div>
-        <div class="page-sub">Join and remain in any Discord voice channel or AFK room 24/7 with automatic mute, deafen, and Join-to-Create room tracking.</div>
+        <div class="page-title">Voice Room AFK & 🔔 WhatsApp Alerts (+21654096479)</div>
+        <div class="page-sub">24/7 Discord Voice AFK + Instant WhatsApp & Desktop notifications when someone DMs, @mentions, or chats in your voice room.</div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-green" style="height:36px; padding:0 14px; font-size:12px;" onclick="testNotificationAlert(true)">🔔 Test WhatsApp (+21654096479) & Alert</button>
+        <button class="btn-primary" style="height:36px; padding:0 14px; font-size:12px;" onclick="openWhatsAppActivation()">📲 Link 24/7 WhatsApp Bot</button>
       </div>
     </div>
 
@@ -723,9 +728,9 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
           <button class="btn-secondary" style="width: 100%; height: 30px; font-size: 11px;" onclick="resetEmergencyLock()">Reset Emergency Lock</button>
         </div>
 
-        <div class="section-card" style="border: 1px solid #23a55a55;">
+        <div class="section-card" id="waAlertCardTop" style="border: 2px solid #23a55a;">
           <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
-            <span>🔔 AFK Message & Mention Alerts (WhatsApp & Push)</span>
+            <span>🔔 AFK Message & Mention Alerts (WhatsApp: +21654096479)</span>
             <span id="waStatusBadge" style="font-size:10px; padding:2px 6px; border-radius:4px; background:var(--bg-input); color:var(--green);">Active</span>
           </div>
           <div class="card-desc">
@@ -738,28 +743,43 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             <label class="checkbox-row"><input type="checkbox" id="cbNotifyVoiceChat" checked> Voice Room Chat</label>
           </div>
           <div class="form-group">
-            <label class="form-label">WhatsApp Phone Number (with Country Code, e.g. +21612345678):</label>
-            <input class="form-input" id="entryWaPhone" value="" placeholder="+216XXXXXXXX">
+            <label class="form-label">WhatsApp Phone Number (Linked to your WhatsApp):</label>
+            <input class="form-input" id="entryWaPhone" value="+21654096479" placeholder="+21654096479">
           </div>
           <div class="form-group">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-              <label class="form-label" style="margin:0;">CallMeBot WhatsApp API Key (or Custom Webhook URL):</label>
-              <a href="https://wa.me/34644718199?text=I%20allow%20callmebot%20to%20send%20me%20messages" target="_blank" style="font-size:10px; color:var(--green); font-weight:700; text-decoration:underline;">Get Free WhatsApp Key (10s) ↗</a>
+              <label class="form-label" style="margin:0;">24/7 Cloud WhatsApp API Key (CallMeBot) or Webhook URL:</label>
+              <a href="whatsapp://send?phone=34644718199&text=I%20allow%20callmebot%20to%20send%20me%20messages" style="font-size:10px; color:var(--green); font-weight:700; text-decoration:underline;">📲 Click to Get Free Key in WhatsApp App ↗</a>
             </div>
-            <input class="form-input" id="entryWaApiKey" value="" placeholder="e.g. 1234567 (from CallMeBot) or https://... webhook">
+            <input class="form-input" id="entryWaApiKey" value="" placeholder="Paste the 7-digit key CallMeBot replies with (or leave blank for PC/Browser alerts)">
           </div>
           <div style="font-size:10px; color:var(--text-muted); margin-bottom:10px; line-height:1.4; background:var(--bg-input); padding:6px 8px; border-radius:6px;">
-            💡 <b>How to get your free WhatsApp Key:</b> Click <b>"Get Free WhatsApp Key (10s)"</b> above (or message <b>+34 644 71 81 99</b> on WhatsApp with: <code>I allow callmebot to send me messages</code>). Paste your phone number & the key it replies with, then click Save!
+            💡 <b>Your number (+21654096479) is pre-configured!</b> Click <b>"🔔 Test WhatsApp & Alert"</b> below to test right now. For 24/7 Cloud WhatsApp when your PC is off, click <b>"📲 Click to Get Free Key in WhatsApp App"</b>, press Send in WhatsApp, and paste the key it gives you!
           </div>
           <div class="form-row" style="gap:6px;">
-            <button class="btn-primary" style="flex:1; height:34px; font-size:11px;" onclick="saveNotificationSettings()">Save Alert Settings</button>
-            <button class="btn-green" style="flex:1; height:34px; font-size:11px;" onclick="testNotificationAlert()">Test WhatsApp & Alert</button>
+            <button class="btn-primary" style="flex:1; height:36px; font-size:11px;" onclick="saveNotificationSettings()">💾 Save Alert Settings</button>
+            <button class="btn-green" style="flex:1; height:36px; font-size:11px;" onclick="testNotificationAlert(true)">🔔 Test WhatsApp (+21654096479) & Alert</button>
           </div>
           <button class="btn-secondary" style="width:100%; height:28px; font-size:10px; margin-top:4px;" onclick="requestBrowserNotificationPerm()">Enable Browser Desktop/Mobile Pop-up & Sound Alerts</button>
         </div>
       </div>
 
       <div class="col-scroll">
+        <div class="section-card" style="border: 2px solid var(--green); background: linear-gradient(180deg, #16241c 0%, var(--bg-surface) 100%);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <div class="card-title" style="margin:0; color:#43b581;">🔔 WhatsApp & AFK Alert Center (+21654096479)</div>
+            <span style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; background:#23a55a33; color:#43b581;">24/7 ACTIVE</span>
+          </div>
+          <div style="font-size:11px; color:var(--text-secondary); margin-bottom:10px;">
+            Monitoring <b>DMs</b>, <b>@Mentions</b> & <b>Voice Room Chat</b> for <b>la2nis</b> -> Forwarding to <b>+21654096479</b> & Live Inbox below.
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="btn-green" style="flex:1; height:34px; font-size:11px; padding:0 10px;" onclick="testNotificationAlert(true)">🔔 Test Alert & WhatsApp Now</button>
+            <button class="btn-primary" style="flex:1; height:34px; font-size:11px; padding:0 10px;" onclick="openWhatsAppActivation()">📲 Activate 24/7 WhatsApp Bot</button>
+            <button class="btn-secondary" style="flex:0 0 auto; height:34px; font-size:11px; padding:0 10px;" onclick="document.getElementById('waAlertCardTop').scrollIntoView({behavior:'smooth'})">⚙️ Settings</button>
+          </div>
+        </div>
+
         <div class="section-card">
           <div class="card-title">Live Room Telemetry</div>
           <div id="monStatus" style="font-size: 13px; font-weight: 700; color: var(--green); margin-bottom: 6px;">[CONNECTED] Status: Connected & In Voice Room (24/7 Cloud)</div>
@@ -1395,7 +1415,22 @@ async function saveNotificationSettings() {
   }
 }
 
-async function testNotificationAlert() {
+function openWhatsAppPanel() {
+  switchPage('voice');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const navAlerts = document.getElementById('nav-alerts');
+  if (navAlerts) navAlerts.classList.add('active');
+  setTimeout(() => {
+    const el = document.getElementById('waAlertCardTop');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 100);
+}
+
+function openWhatsAppActivation() {
+  window.location.href = 'whatsapp://send?phone=34644718199&text=I%20allow%20callmebot%20to%20send%20me%20messages';
+}
+
+async function testNotificationAlert(openDirectWa = false) {
   await saveNotificationSettings();
   playAlertChime();
   if ('Notification' in window && Notification.permission === 'granted') {
@@ -1416,6 +1451,12 @@ async function testNotificationAlert() {
     if (d.ok) {
       appendWebLog('SAFETY', 'Test alert dispatched! ' + (d.wa_result || ''), 'SAFETY');
       setTimeout(refreshTelemetry, 500);
+      const apiKeyVal = (document.getElementById('entryWaApiKey')?.value || '').trim();
+      const phoneVal = (document.getElementById('entryWaPhone')?.value || '+21654096479').replace(/[^0-9]/g, '');
+      if (openDirectWa && !apiKeyVal && phoneVal) {
+        const msg = encodeURIComponent('🔔 *Discord AFK Test Alert*\n👤 *From:* Discord Studio PRO\n📍 *Room:* ' + (d.alert?.channel_name || 'Voice Room') + '\n💬 *Message:* Hey @la2nis! Your WhatsApp (+21654096479) AFK notification system is working!');
+        window.location.href = 'whatsapp://send?phone=' + phoneVal + '&text=' + msg;
+      }
     } else {
       appendWebLog('WARN', 'Test alert note: ' + (d.error || JSON.stringify(d)), 'WARN');
     }
@@ -1827,7 +1868,7 @@ export class DiscordAFKSession {
     this.leaderInstanceId = null;
     this.lastTelemetryAt = 0;
     this.emergencyLocked = false;
-    this.notifyConfig = { enabled: true, dm: true, mention: true, voice_chat: true, wa_phone: "", wa_apikey: "" };
+    this.notifyConfig = { enabled: true, dm: true, mention: true, voice_chat: true, wa_phone: "+21654096479", wa_apikey: "" };
     this.notifications = [];
     this.seenAlertIds = [];
   }
@@ -1944,7 +1985,7 @@ export class DiscordAFKSession {
     const savedSelfDeaf = await this.ctx.storage.get("selfDeaf");
     if (savedSelfDeaf !== undefined) this.selfDeaf = Boolean(savedSelfDeaf);
     const savedNotifyCfg = await this.ctx.storage.get("notifyConfig");
-    if (savedNotifyCfg && typeof savedNotifyCfg === "object") this.notifyConfig = savedNotifyCfg;
+    if (savedNotifyCfg && typeof savedNotifyCfg === "object") { if (!savedNotifyCfg.wa_phone) savedNotifyCfg.wa_phone = "+21654096479"; this.notifyConfig = savedNotifyCfg; }
     const savedNotifs = await this.ctx.storage.get("notifications");
     if (savedNotifs && Array.isArray(savedNotifs)) this.notifications = savedNotifs;
     const savedSeenAlerts = await this.ctx.storage.get("seenAlertIds");
@@ -2355,7 +2396,7 @@ export class DiscordAFKSession {
     const accept = request.headers.get("Accept") || "";
     if (!url.pathname.startsWith("/health") && (accept.includes("text/html") || url.pathname.startsWith("/dashboard"))) {
       return new Response(DASHBOARD_HTML, {
-        headers: { "Content-Type": "text/html; charset=utf-8" }
+        headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" }
       });
     }
 
