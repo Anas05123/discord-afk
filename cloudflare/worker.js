@@ -1454,7 +1454,13 @@ async function testNotificationAlert(openDirectWa = false) {
       const apiKeyVal = (document.getElementById('entryWaApiKey')?.value || '').trim();
       const phoneVal = (document.getElementById('entryWaPhone')?.value || '+21654096479').replace(/[^0-9]/g, '');
       if (openDirectWa && !apiKeyVal && phoneVal) {
-        const msg = encodeURIComponent('🔔 *Discord AFK Test Alert*\n👤 *From:* Discord Studio PRO\n📍 *Room:* ' + (d.alert?.channel_name || 'Voice Room') + '\n💬 *Message:* Hey @la2nis! Your WhatsApp (+21654096479) AFK notification system is working!');
+        const lines = [
+          '🔔 *Discord AFK Test Alert*',
+          '👤 *From:* Discord Studio PRO',
+          '📍 *Room:* ' + (d.alert && d.alert.channel_name ? d.alert.channel_name : 'Voice Room'),
+          '💬 *Message:* Hey @la2nis! Your WhatsApp (+21654096479) AFK notification system is working!'
+        ];
+        const msg = encodeURIComponent(lines.join(String.fromCharCode(10)));
         window.location.href = 'whatsapp://send?phone=' + phoneVal + '&text=' + msg;
       }
     } else {
