@@ -976,6 +976,49 @@ function connectGateway() {
           }
         } else if (data.t === "GUILD_CREATE") {
           cacheGuildChannels([data.d]);
+        } else if (data.t === "MESSAGE_CREATE") {
+          const msg = data.d;
+          if (msg && msg.author && String(msg.author.id) !== String(myUserId) && !msg.author.bot) {
+            const isDm = !msg.guild_id;
+            const contentStr = String(msg.content || "");
+            const isMentioned = (
+              (Array.isArray(msg.mentions) && msg.mentions.some(u => String(u.id) === String(myUserId))) ||
+              contentStr.includes(`<@${myUserId}>`) ||
+              contentStr.includes(`<@!${myUserId}>`) ||
+              String(msg.referenced_message?.author?.id || "") === String(myUserId) ||
+              contentStr.toLowerCase().includes("la2nis")
+            );
+            const isActiveVoiceRoomMsg = Boolean(localActiveChannelId && String(msg.channel_id) === String(localActiveChannelId));
+
+            if (isDm || isMentioned || isActiveVoiceRoomMsg) {
+              const alertType = isDm ? "DM" : (isActiveVoiceRoomMsg && !isMentioned ? "VOICE_CHAT" : "MENTION");
+              const authorLabel = msg.author.global_name
+                ? `${msg.author.global_name} (@${msg.author.username})`
+                : `@${msg.author.username || "User"}`;
+              const chanName = isDm
+                ? "Direct Message (DM)"
+                : ((await resolveChannelName(msg.channel_id)) || `Channel ${msg.channel_id}`);
+              const cleanContent = (contentStr || "[Attachment / Sticker / Voice Message]").trim().slice(0, 280);
+
+              Logger.info("NOTIFY", `🔔 [${alertType}] From ${authorLabel} in ${chanName}: "${cleanContent}"`);
+              fetch(`${WORKER_URL}/api/notifications`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" },
+                body: JSON.stringify({
+                  action: "incoming_message",
+                  alert: {
+                    id: String(msg.id || Date.now()),
+                    type: alertType,
+                    author: authorLabel,
+                    channel_id: String(msg.channel_id || ""),
+                    channel_name: chanName,
+                    content: cleanContent
+                  }
+                }),
+                signal: AbortSignal.timeout(5000)
+              }).catch(() => {});
+            }
+          }
         }
 
         // VOICE_STATE_UPDATE

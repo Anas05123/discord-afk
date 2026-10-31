@@ -722,6 +722,41 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
           <button class="btn-red" style="width: 100%; height: 38px; font-size: 11px; font-weight: 700; background: #8B0000; margin-bottom: 6px;" onclick="triggerEmergencyKillswitch()">EMERGENCY KILLSWITCH (Force Leave & Lock)</button>
           <button class="btn-secondary" style="width: 100%; height: 30px; font-size: 11px;" onclick="resetEmergencyLock()">Reset Emergency Lock</button>
         </div>
+
+        <div class="section-card" style="border: 1px solid #23a55a55;">
+          <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>🔔 AFK Message & Mention Alerts (WhatsApp & Push)</span>
+            <span id="waStatusBadge" style="font-size:10px; padding:2px 6px; border-radius:4px; background:var(--bg-input); color:var(--green);">Active</span>
+          </div>
+          <div class="card-desc">
+            Receive instant WhatsApp messages & browser notifications whenever someone DMs you, @mentions you, or chats in your active voice room while you are AFK.
+          </div>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-bottom:10px;">
+            <label class="checkbox-row"><input type="checkbox" id="cbNotifyEnabled" checked> Enable Alerts</label>
+            <label class="checkbox-row"><input type="checkbox" id="cbNotifyDm" checked> Direct Messages (DMs)</label>
+            <label class="checkbox-row"><input type="checkbox" id="cbNotifyMention" checked> @Mentions & Replies</label>
+            <label class="checkbox-row"><input type="checkbox" id="cbNotifyVoiceChat" checked> Voice Room Chat</label>
+          </div>
+          <div class="form-group">
+            <label class="form-label">WhatsApp Phone Number (with Country Code, e.g. +21612345678):</label>
+            <input class="form-input" id="entryWaPhone" value="" placeholder="+216XXXXXXXX">
+          </div>
+          <div class="form-group">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label class="form-label" style="margin:0;">CallMeBot WhatsApp API Key (or Custom Webhook URL):</label>
+              <a href="https://wa.me/34644718199?text=I%20allow%20callmebot%20to%20send%20me%20messages" target="_blank" style="font-size:10px; color:var(--green); font-weight:700; text-decoration:underline;">Get Free WhatsApp Key (10s) ↗</a>
+            </div>
+            <input class="form-input" id="entryWaApiKey" value="" placeholder="e.g. 1234567 (from CallMeBot) or https://... webhook">
+          </div>
+          <div style="font-size:10px; color:var(--text-muted); margin-bottom:10px; line-height:1.4; background:var(--bg-input); padding:6px 8px; border-radius:6px;">
+            💡 <b>How to get your free WhatsApp Key:</b> Click <b>"Get Free WhatsApp Key (10s)"</b> above (or message <b>+34 644 71 81 99</b> on WhatsApp with: <code>I allow callmebot to send me messages</code>). Paste your phone number & the key it replies with, then click Save!
+          </div>
+          <div class="form-row" style="gap:6px;">
+            <button class="btn-primary" style="flex:1; height:34px; font-size:11px;" onclick="saveNotificationSettings()">Save Alert Settings</button>
+            <button class="btn-green" style="flex:1; height:34px; font-size:11px;" onclick="testNotificationAlert()">Test WhatsApp & Alert</button>
+          </div>
+          <button class="btn-secondary" style="width:100%; height:28px; font-size:10px; margin-top:4px;" onclick="requestBrowserNotificationPerm()">Enable Browser Desktop/Mobile Pop-up & Sound Alerts</button>
+        </div>
       </div>
 
       <div class="col-scroll">
@@ -744,8 +779,22 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
               <button class="btn-secondary" style="height: 22px; padding: 0 8px; font-size: 10px;" onclick="clearWebConsole()">Clear</button>
             </div>
           </div>
-          <div id="webEventConsole" style="background: #090a0d; border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11px; color: #c9d1d9; height: 180px; overflow-y: auto; line-height: 1.5;">
+          <div id="webEventConsole" style="background: #090a0d; border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11px; color: #c9d1d9; height: 165px; overflow-y: auto; line-height: 1.5;">
             <div style="color: var(--text-muted);">[SYSTEM] Live event console connected. Monitoring voice engine & safety state...</div>
+          </div>
+        </div>
+
+        <div class="section-card" style="margin-top: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;">
+              <span>📩 Live DMs, @Mentions & Voice Chat Inbox</span>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn-secondary" style="height: 22px; padding: 0 8px; font-size: 10px;" onclick="clearMentionsInbox()">Clear Inbox</button>
+            </div>
+          </div>
+          <div id="webMentionsBox" style="background: #090a0d; border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-size: 11px; color: #c9d1d9; height: 155px; overflow-y: auto; line-height: 1.45;">
+            <div style="color: var(--text-muted);">No DMs or @mentions received yet while AFK. Incoming alerts will appear here & forward to WhatsApp.</div>
           </div>
         </div>
       </div>
@@ -1274,6 +1323,119 @@ async function joinVoiceRoom() {
 }
 
 const seenLogIds = new Set();
+const seenAlertClientIds = new Set();
+let initialAlertsLoaded = false;
+let notifyConfigLoadedToUi = false;
+
+function playAlertChime() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.45);
+  } catch (e) {}
+}
+
+async function requestBrowserNotificationPerm() {
+  if (!('Notification' in window)) {
+    appendWebLog('WARN', 'This browser does not support desktop notifications.', 'WARN');
+    return;
+  }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    appendWebLog('SAFETY', 'Browser Desktop/Mobile notifications enabled! Playing test chime...', 'SAFETY');
+    playAlertChime();
+    new Notification('Discord Studio PRO — Alerts Active', {
+      body: 'You will now receive instant pop-up & sound alerts when someone DMs or @mentions you!'
+    });
+  } else {
+    appendWebLog('WARN', 'Browser notification permission was not granted (' + perm + ').', 'WARN');
+  }
+}
+
+async function saveNotificationSettings() {
+  const payload = {
+    action: 'save_config',
+    enabled: document.getElementById('cbNotifyEnabled').checked,
+    dm: document.getElementById('cbNotifyDm').checked,
+    mention: document.getElementById('cbNotifyMention').checked,
+    voice_chat: document.getElementById('cbNotifyVoiceChat').checked,
+    wa_phone: document.getElementById('entryWaPhone').value.trim(),
+    wa_apikey: document.getElementById('entryWaApiKey').value.trim()
+  };
+  appendWebLog('SAFETY', 'Saving AFK Notification & WhatsApp settings...', 'SAFETY');
+  try {
+    const r = await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json().catch(() => ({ ok: false }));
+    if (d.ok) {
+      appendWebLog('SAFETY', 'SUCCESS: AFK Message & WhatsApp alert settings saved!', 'SAFETY');
+      const badge = document.getElementById('waStatusBadge');
+      if (badge) {
+        badge.textContent = payload.wa_phone && payload.wa_apikey ? 'WhatsApp Linked' : (payload.enabled ? 'Browser Active' : 'Paused');
+      }
+    } else {
+      appendWebLog('ERROR', 'Failed to save notification settings: ' + JSON.stringify(d), 'ERROR');
+    }
+  } catch (e) {
+    appendWebLog('ERROR', 'Error saving notification settings: ' + e, 'ERROR');
+  }
+}
+
+async function testNotificationAlert() {
+  await saveNotificationSettings();
+  playAlertChime();
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification('🔔 Test Discord AFK Alert', {
+        body: 'From @TestUser: Hey la2nis, are you in the voice room?'
+      });
+    } catch (e) {}
+  }
+  appendWebLog('VOICE', 'Sending test alert to Inbox & WhatsApp...', 'VOICE');
+  try {
+    const r = await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ action: 'test' })
+    });
+    const d = await r.json().catch(() => ({ ok: false }));
+    if (d.ok) {
+      appendWebLog('SAFETY', 'Test alert dispatched! ' + (d.wa_result || ''), 'SAFETY');
+      setTimeout(refreshTelemetry, 500);
+    } else {
+      appendWebLog('WARN', 'Test alert note: ' + (d.error || JSON.stringify(d)), 'WARN');
+    }
+  } catch (e) {
+    appendWebLog('ERROR', 'Test alert error: ' + e, 'ERROR');
+  }
+}
+
+async function clearMentionsInbox() {
+  const box = document.getElementById('webMentionsBox');
+  if (box) box.innerHTML = '<div style="color: var(--text-muted);">Inbox cleared.</div>';
+  seenAlertClientIds.clear();
+  try {
+    await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'clear_inbox' })
+    });
+  } catch (e) {}
+}
 
 function appendWebLog(tag, msg, level = 'INFO') {
   const box = document.getElementById('webEventConsole');
@@ -1448,6 +1610,57 @@ async function refreshTelemetry() {
     const r = await fetch('/health');
     const d = await r.json();
 
+    if (d.notify_config && !notifyConfigLoadedToUi) {
+      notifyConfigLoadedToUi = true;
+      const nc = d.notify_config;
+      if (document.getElementById('cbNotifyEnabled')) document.getElementById('cbNotifyEnabled').checked = nc.enabled !== false;
+      if (document.getElementById('cbNotifyDm')) document.getElementById('cbNotifyDm').checked = nc.dm !== false;
+      if (document.getElementById('cbNotifyMention')) document.getElementById('cbNotifyMention').checked = nc.mention !== false;
+      if (document.getElementById('cbNotifyVoiceChat')) document.getElementById('cbNotifyVoiceChat').checked = nc.voice_chat !== false;
+      if (nc.wa_phone && document.getElementById('entryWaPhone')) document.getElementById('entryWaPhone').value = nc.wa_phone;
+      if (nc.wa_apikey && document.getElementById('entryWaApiKey')) document.getElementById('entryWaApiKey').value = nc.wa_apikey;
+      const badge = document.getElementById('waStatusBadge');
+      if (badge) {
+        badge.textContent = (nc.wa_phone && nc.wa_apikey) ? 'WhatsApp Linked' : (nc.enabled !== false ? 'Browser Active' : 'Paused');
+      }
+    }
+    if (d.notifications && Array.isArray(d.notifications)) {
+      const mbox = document.getElementById('webMentionsBox');
+      for (const item of d.notifications) {
+        const aid = String(item.id || (item.ts + '_' + item.author));
+        if (!seenAlertClientIds.has(aid)) {
+          if (seenAlertClientIds.size === 0 && mbox && mbox.innerHTML.includes('No DMs or @mentions')) {
+            mbox.innerHTML = '';
+          }
+          seenAlertClientIds.add(aid);
+          if (mbox) {
+            const row = document.createElement('div');
+            row.style.padding = '6px 8px';
+            row.style.marginBottom = '6px';
+            row.style.borderRadius = '6px';
+            row.style.background = 'var(--bg-surface)';
+            row.style.borderLeft = item.type === 'DM' ? '3px solid var(--red)' : (item.type === 'VOICE_CHAT' ? '3px solid var(--green)' : '3px solid var(--blurple)');
+            const badgeColor = item.type === 'DM' ? 'var(--red)' : (item.type === 'VOICE_CHAT' ? 'var(--green)' : 'var(--blurple)');
+            row.innerHTML = '<div style="display:flex; justify-content:space-between; margin-bottom:2px;">' +
+              '<span><b style="color:' + badgeColor + ';">[' + (item.type || 'ALERT') + ']</b> <b style="color:var(--text-primary);">' + (item.author || 'User') + '</b> <span style="color:var(--text-muted);">in ' + (item.channel_name || 'Discord') + '</span></span>' +
+              '<span style="color:var(--text-muted); font-size:10px;">' + (item.ts || '') + '</span></div>' +
+              '<div style="color:#dbdee1; word-break:break-word;">' + (item.content || '') + '</div>';
+            mbox.insertBefore(row, mbox.firstChild);
+          }
+          if (initialAlertsLoaded) {
+            playAlertChime();
+            if ('Notification' in window && Notification.permission === 'granted') {
+              try {
+                new Notification('🔔 Discord ' + (item.type || 'Alert') + ' from ' + (item.author || 'User'), {
+                  body: (item.channel_name ? '[' + item.channel_name + '] ' : '') + (item.content || '')
+                });
+              } catch (e) {}
+            }
+          }
+        }
+      }
+      initialAlertsLoaded = true;
+    }
     if (d.debug_logs && Array.isArray(d.debug_logs)) {
       for (const log of d.debug_logs) {
         const key = (log.ts || '') + '_' + (log.tag || '') + '_' + (log.message || '');
@@ -1614,6 +1827,49 @@ export class DiscordAFKSession {
     this.leaderInstanceId = null;
     this.lastTelemetryAt = 0;
     this.emergencyLocked = false;
+    this.notifyConfig = { enabled: true, dm: true, mention: true, voice_chat: true, wa_phone: "", wa_apikey: "" };
+    this.notifications = [];
+    this.seenAlertIds = [];
+  }
+
+  async sendWhatsAppAlert(alertObj) {
+    const nc = this.notifyConfig || {};
+    if (nc.enabled === false) return "Alerts disabled";
+    const phone = String(nc.wa_phone || "").replace(/[^0-9+]/g, "").trim();
+    const apikey = String(nc.wa_apikey || "").trim();
+    if (!phone && !apikey) return "No WhatsApp phone/key configured (logged to Dashboard Inbox)";
+
+    const text = "🔔 *Discord AFK Alert [" + (alertObj.type || "MSG") + "]*\n" +
+      "👤 *From:* " + (alertObj.author || "Unknown") + "\n" +
+      "📍 *Where:* " + (alertObj.channel_name || "Discord") + "\n" +
+      "💬 *Message:* " + (alertObj.content || "");
+
+    try {
+      if (apikey.startsWith("http://") || apikey.startsWith("https://")) {
+        const r = await fetch(apikey, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: text, text: text, alert: alertObj })
+        });
+        return r.ok ? "Webhook notification sent!" : ("Webhook HTTP " + r.status);
+      }
+      const cleanPhone = phone.replace(/^\+/, "");
+      const url = "https://api.callmebot.com/whatsapp.php?phone=" + encodeURIComponent(cleanPhone) +
+        "&text=" + encodeURIComponent(text) +
+        "&apikey=" + encodeURIComponent(apikey);
+      const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+      const bodyText = await r.text().catch(() => "");
+      if (r.ok) {
+        this.addLog("SAFETY", "WHATSAPP", "WhatsApp notification delivered to " + phone);
+        return "WhatsApp message sent to " + phone + "!";
+      } else {
+        this.addLog("WARN", "WHATSAPP", "WhatsApp API response (" + r.status + "): " + bodyText.slice(0, 120));
+        return "CallMeBot HTTP " + r.status + ": " + bodyText.slice(0, 80);
+      }
+    } catch (e) {
+      this.addLog("ERROR", "WHATSAPP", "WhatsApp request error: " + (e.message || e));
+      return "Error: " + (e.message || e);
+    }
   }
 
   addLog(level, tag, message) {
@@ -1687,6 +1943,12 @@ export class DiscordAFKSession {
     if (savedSelfMute !== undefined) this.selfMute = Boolean(savedSelfMute);
     const savedSelfDeaf = await this.ctx.storage.get("selfDeaf");
     if (savedSelfDeaf !== undefined) this.selfDeaf = Boolean(savedSelfDeaf);
+    const savedNotifyCfg = await this.ctx.storage.get("notifyConfig");
+    if (savedNotifyCfg && typeof savedNotifyCfg === "object") this.notifyConfig = savedNotifyCfg;
+    const savedNotifs = await this.ctx.storage.get("notifications");
+    if (savedNotifs && Array.isArray(savedNotifs)) this.notifications = savedNotifs;
+    const savedSeenAlerts = await this.ctx.storage.get("seenAlertIds");
+    if (savedSeenAlerts && Array.isArray(savedSeenAlerts)) this.seenAlertIds = savedSeenAlerts;
   }
 
   async resolveValidChannel(token) {
@@ -1977,6 +2239,81 @@ export class DiscordAFKSession {
       return new Response(JSON.stringify({ ok: true, leader_instance_id: this.leaderInstanceId }), { headers: { "Content-Type": "application/json" } });
     }
 
+    if (request.method === "POST" && url.pathname.startsWith("/api/notifications")) {
+      await this.initState();
+      const body = await request.json().catch(() => ({}));
+      if (body.action === "save_config") {
+        this.notifyConfig = {
+          enabled: body.enabled !== false,
+          dm: body.dm !== false,
+          mention: body.mention !== false,
+          voice_chat: body.voice_chat !== false,
+          wa_phone: String(body.wa_phone || "").trim(),
+          wa_apikey: String(body.wa_apikey || "").trim()
+        };
+        await this.ctx.storage.put("notifyConfig", this.notifyConfig);
+        this.addLog("SAFETY", "NOTIFY", "Updated AFK Message & WhatsApp notification settings.");
+        return new Response(JSON.stringify({ ok: true, notify_config: this.notifyConfig }), { headers: { "Content-Type": "application/json" } });
+      }
+      if (body.action === "clear_inbox") {
+        this.notifications = [];
+        await this.ctx.storage.put("notifications", this.notifications);
+        return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+      }
+      if (body.action === "test") {
+        const d = new Date();
+        const pad = n => String(n).padStart(2, "0");
+        const ts = pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+        const testAlert = {
+          id: "test_" + Date.now(),
+          type: "MENTION",
+          author: "TestUser (@test)",
+          channel_name: this.channelName || "Voice Room Chat",
+          content: "Hey @la2nis! Testing your 24/7 Discord AFK WhatsApp & Dashboard notification system!",
+          ts
+        };
+        this.notifications.push(testAlert);
+        if (this.notifications.length > 35) this.notifications.shift();
+        await this.ctx.storage.put("notifications", this.notifications);
+        const waRes = await this.sendWhatsAppAlert(testAlert);
+        return new Response(JSON.stringify({ ok: true, wa_result: waRes, alert: testAlert }), { headers: { "Content-Type": "application/json" } });
+      }
+      if (body.action === "incoming_message" && body.alert) {
+        const alert = body.alert;
+        const aid = String(alert.id || "");
+        if (aid && this.seenAlertIds.includes(aid)) {
+          return new Response(JSON.stringify({ ok: true, duplicate: true }), { headers: { "Content-Type": "application/json" } });
+        }
+        if (aid) {
+          this.seenAlertIds.push(aid);
+          if (this.seenAlertIds.length > 100) this.seenAlertIds.shift();
+          await this.ctx.storage.put("seenAlertIds", this.seenAlertIds);
+        }
+        const nc = this.notifyConfig || {};
+        if (nc.enabled === false) {
+          return new Response(JSON.stringify({ ok: true, skipped: "disabled" }), { headers: { "Content-Type": "application/json" } });
+        }
+        if (alert.type === "DM" && nc.dm === false) {
+          return new Response(JSON.stringify({ ok: true, skipped: "dm_disabled" }), { headers: { "Content-Type": "application/json" } });
+        }
+        if (alert.type === "MENTION" && nc.mention === false) {
+          return new Response(JSON.stringify({ ok: true, skipped: "mention_disabled" }), { headers: { "Content-Type": "application/json" } });
+        }
+        if (alert.type === "VOICE_CHAT" && nc.voice_chat === false) {
+          return new Response(JSON.stringify({ ok: true, skipped: "voice_chat_disabled" }), { headers: { "Content-Type": "application/json" } });
+        }
+        const d = new Date();
+        const pad = n => String(n).padStart(2, "0");
+        alert.ts = alert.ts || (pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds()));
+        this.notifications.push(alert);
+        if (this.notifications.length > 35) this.notifications.shift();
+        await this.ctx.storage.put("notifications", this.notifications);
+        const waRes = await this.sendWhatsAppAlert(alert);
+        return new Response(JSON.stringify({ ok: true, wa_result: waRes }), { headers: { "Content-Type": "application/json" } });
+      }
+      return new Response(JSON.stringify({ ok: false, error: "Unknown notification action" }), { headers: { "Content-Type": "application/json" } });
+    }
+
     if (request.method === "POST" && url.pathname.startsWith("/api/activity")) {
       const body = await request.json().catch(() => ({}));
       if (body.clear || (!body.name && !body.details && !body.state && !body.preset && !body.key)) {
@@ -2048,6 +2385,8 @@ export class DiscordAFKSession {
       self_deaf: this.selfDeaf !== undefined ? this.selfDeaf : true,
       startTimestampMs: this.startTimestampMs,
       activity: this.activity,
+      notify_config: this.notifyConfig || { enabled: true, dm: true, mention: true, voice_chat: true, wa_phone: "", wa_apikey: "" },
+      notifications: this.notifications || [],
       debug_logs: this.logs || []
     }, null, 2), {
       headers: { "Content-Type": "application/json" }
